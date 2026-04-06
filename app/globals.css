@@ -1,26 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap');
 @import 'tailwindcss';
 
+
+/*  USE RGB/RGBA COLORS CODES IN ROOT FOR OPACITY TO WORK  */
 :root {
-  --background: #ffffff;
+  --background: #ffff;
   --foreground: #171717;
+  --logo: #75411a;
+  --primary : 95 94 94;
+  --secondary : 116 91 59;
+  --on-secondary : #fff7f3 ;
+  --outline-variant: #adb3b0;
+  --outline: #e5e7eb;
+  --header : #ffff;
 }
 
 @theme inline {
+
+  /* COLORS */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-logo: var(--logo);
+  --color-primary: rgba(var(--primary));
+  --color-secondary: rgba(var(--secondary));
+  --color-on-secondary: var(--on-secondary);
+  --color-outline : var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-header: var(--header);
+
+  /* FONTS */
+  --font-headline : "Noto-Serif", serif;
+  --font-body: "Inter", sans-serif, arial;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+
+
+/*               DATE PICKER STYLES              */
+
+/*  Change the background of the selected date */
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range,
+.react-datepicker__month-text--selected,
+.react-datepicker__quarter-text--selected,
+.react-datepicker__year-text--selected {
+  background-color: var(--color-secondary) !important; 
+  color: var(--background) !important;
+}
+
+.react-datepicker__day--selected:hover,
+.react-datepicker__day--in-selecting-range:hover,
+.react-datepicker__day--in-range:hover {
+  background-color: #6b4423 !important;   /*change Hover color here */
+}
+
+/*  Change the keyboard navigation highlight (the day focused via keyboard) */
+.react-datepicker__day--keyboard-selected {
+  background-color: #a06b3a !important; 
+  color: var(--background) !important;
+}
+
+/*  Optional: Change the hover color for unselected days to a light tan/brown */
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__quarter-text:hover,
+.react-datepicker__year-text:hover {
+  background-color: #f4ece4 !important; 
 }
