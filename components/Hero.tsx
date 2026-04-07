@@ -4,9 +4,6 @@ import SearchAvailabiltyBar from "./SearchAvailabilyBar"
 
 
 export default function Hero() {
-    // Date States
-    
-
     return (
         <section className="max-w-[1920px] mx-auto px-4   sm:px-6 md:px-16  py-24 flex flex-col gap-10 lg:gap-16">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10">
@@ -24,7 +21,10 @@ export default function Hero() {
                         </a>
                     </div>
                 </div>
+                <div>
+                <span className="text-xl font-headline text-secondary font-extralight ml-2">Check room availability</span>
                 <SearchAvailabiltyBar />
+                </div>
             </div>
 
             <div className="w-full h-[300px] sm:h-[400px] md:h-[500px] rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl relative">

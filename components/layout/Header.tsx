@@ -1,17 +1,20 @@
+import Link from "next/link"
+
 export default function Header() {
     return (
         <header className="fixed top-0 w-full z-50 bg-header border-b border-outline">
             <div className="flex justify-between items-centetr px-12 py-5 max-w-[1920px] mx-auto">
-                <div className="text-2xl font-semibold font-headline italic text-logo tracking-tight">    
-                        HotelName
-                </div>
+                <Link className="text-2xl font-semibold font-headline italic text-logo tracking-tight"
+                       href="/">    
+                    HotelName
+                </Link>
                 <nav className="hidden md:flex gap-12 items-center">
                     <a className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
                         href="#" > Home </a>
-                    <a className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
+                    <Link className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
-                        href="#" > Rooms </a>
+                        href="/rooms" > Rooms </Link>
                     <a className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
                         href="#" > Contact </a>

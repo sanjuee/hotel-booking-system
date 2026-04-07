@@ -29,7 +29,6 @@ export default function SearchAvailabiltyBar(){
 
     return (
         <div className="flex flex-col md:flex-row items-stretch rounded-2xl shadow-xl border border-outline w-full lg:w-auto z-10 relative bg-white">
-                    
                     {/* Check In */}
                     <div className="flex-1 px-5  py-4  md:py-6 border-b md:border-b-0 md:border-r border-outline min-w-40">
                         <label className="block text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1 md:mb-2">Check-In</label>
