@@ -1,6 +1,6 @@
 export default function Header() {
     return (
-        <header className="fixed top-0 w-full z-50 bg-header border-b border-secondary">
+        <header className="fixed top-0 w-full z-50 bg-header border-b border-outline">
             <div className="flex justify-between items-centetr px-12 py-5 max-w-[1920px] mx-auto">
                 <div className="text-2xl font-semibold font-headline italic text-logo tracking-tight">    
                         HotelName
