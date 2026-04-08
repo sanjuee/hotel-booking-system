@@ -9,9 +9,9 @@ export default function Header() {
                     HotelName
                 </Link>
                 <nav className="hidden md:flex gap-12 items-center">
-                    <a className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
+                    <Link className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
-                        href="#" > Home </a>
+                        href="/" > Home </Link>
                     <Link className="font-headline text-xs tracking-[0.2em] uppercase text-secondary
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
                         href="/rooms" > Rooms </Link>

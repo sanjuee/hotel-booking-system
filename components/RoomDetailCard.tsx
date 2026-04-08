@@ -4,27 +4,21 @@ import Image from 'next/image'
 
 export default function RoomCard({ room }: { room: Room }) {
   return (
-    <div className="flex flex-col md:flex-row border border-outline rounded-lg overflow-hidden bg-background shadow-sm hover:shadow-md transition mb-6">
+    <div className="flex flex-col md:flex-row border border-outline rounded-lg overflow-hidden bg-background shadow-sm hover:shadow-md transition">
       
       {/* 1. LEFT SECTION: Image Container */}
-      <div className="md:w-1/3 relative min-h-[250px]">
+      <div className="md:w-1/3 relative min-h-[250px] ">
         <Image 
           src={room.image} 
           alt={room.name} 
           fill
           className="absolute inset-0 w-full h-full object-cover" 
         />
-        {/* Mock Pagination Dots overlay */}
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-          <div className="w-2 h-2 rounded-full bg-background opacity-100"></div>
-          <div className="w-2 h-2 rounded-full bg-background opacity-50"></div>
-          <div className="w-2 h-2 rounded-full bg-background opacity-50"></div>
-        </div>
       </div>
 
       {/* 2. CENTER SECTION: Text and Amenities */}
       <div className="p-6 md:w-1/2 flex-1">
-        <h2 className="text-2xl font-semibold text-foreground">{room.name}</h2>
+        <h2 className="text-2xl font-semibold text-foreground font-headline">{room.name}</h2>
         <p className="text-primary mt-3 text-sm leading-relaxed">
           {room.description}
         </p>
