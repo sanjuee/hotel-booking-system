@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 // Get the URL from your .env file
-const connectionString = `${process.env.DATABASE_URL}`;
+ const connectionString = `${process.env.DATABASE_URL}`;
 
 // This function creates the connection
 const prismaClientSingleton = () => {
