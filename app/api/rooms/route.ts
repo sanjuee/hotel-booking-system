@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('PRISMA ERROR:', error)
     return NextResponse.json(
-      { message: 'Failed to save room', error: error.message },
+      { message: 'Failed to update room'},
       { status: 500 }
     )
   }

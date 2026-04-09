@@ -3,6 +3,12 @@
 import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface RoomFormData {
   id: string;
@@ -21,6 +27,7 @@ export default function AdminDashboard() {
   const [rooms, setRooms] = useState<Room[]>([]) 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
   const [formData, setFormData] = useState<RoomFormData>({
     id: '',
     name: '',
@@ -53,15 +60,36 @@ export default function AdminDashboard() {
 
   }, [])
 
-  const handleSave = async () => {
+  const handleSave = async() => {
       setIsSaving(true)
 
-      const payload = {
-          ...formData,
-          amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
-      }
-
       try {
+        let imageUrl= ""
+
+        if (file) {
+            
+            const fileName = `${Date.now()}-${file.name}`
+
+            const { data, error } = await supabase.storage
+              .from('rooms') 
+              .upload(fileName, file)
+
+            if (error) throw error;
+
+            const { data: publicUrlData } = supabase.storage
+              .from('rooms')
+              .getPublicUrl(fileName)
+
+            imageUrl = publicUrlData.publicUrl
+        }
+
+        const payload = {
+          ...formData,
+          image : imageUrl,
+          amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
+        }
+
+
         const response = await fetch('/api/rooms', {
           method: 'POST',
           headers: {
@@ -90,6 +118,25 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleDelete = async(roomId: string) => {
+
+    if (!window.confirm("Are you sure you want to delete this room ?")) return;
+
+    try {
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method : 'DELETE'
+      })
+      if (!response.ok) throw new Error ("Failed to delete");
+
+      setRooms((prevRooms) => (prevRooms.filter((room) =>(room.id != roomId))))
+    }
+    catch(error){
+      console.log("Delete error", error)
+      alert("Falied to delete room")
+    }
+  }
+  
+
   const resetForm = () => {
     setFormData({
       id: '', name: '', type: 'Single', price: 0, image: '', description: '', amenities: ''
@@ -111,7 +158,8 @@ export default function AdminDashboard() {
               resetForm()
               setIsFormOpen(true)
             }}
-            className="bg-secondary text-white px-5 py-2.5 rounded shadow-sm hover:bg-[#685333] transition-colors font-medium flex items-center gap-2"
+            className="bg-secondary text-white px-5 py-2.5 rounded shadow-sm hover:bg-[#685333] 
+                      transition-colors font-medium flex items-center gap-2"
           >
             <span>+</span> New Room Entry
           </button>
@@ -139,8 +187,11 @@ export default function AdminDashboard() {
                       {Array.isArray(room.amenities) ? room.amenities.join(', ') : 'None'}
                     </td>
                     <td className="p-5 text-right">
-                      <button className="text-gray-400 hover:text-gray-900 transition-colors">
-                        ⋮
+                      <button className=" bg-primary/20 text-red-600 px-2 py-2 rounded shadow-sm 
+                                    transition-colors text-xs flex items-center gap-2"
+                              onClick={() => handleDelete(room.id)}
+                      >
+                        DETETE
                       </button>
                     </td>
                   </tr>
@@ -157,12 +208,10 @@ export default function AdminDashboard() {
           </div>
           
           {/* Table Footer / Pagination mock */}
-          <div className="p-4 border-t border-gray-200 flex justify-between items-center text-sm text-gray-500 bg-gray-50/50">
-            <span>Showing {rooms.length} room{rooms.length !== 1 ? 's' : ''}</span>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
-              <button className="px-3 py-1 border border-gray-300 rounded bg-white hover:bg-gray-50 disabled:opacity-50" disabled>Next</button>
-            </div>
+          <div className="p-4 border-t border-gray-200 flex justify-between items-center text-sm 
+                      text-gray-500 bg-gray-50/50">
+            <span>Showing all {rooms.length} room{rooms.length !== 1 ? 's' : ''}</span>
+            
           </div>
         </div>
 
@@ -182,7 +231,8 @@ export default function AdminDashboard() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] focus:border-[#8B6E4E] outline-none transition-all"
+                    className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] 
+                              focus:border-[#8B6E4E] outline-none transition-all"
                     placeholder="e.g. The Curator's Loft"
                   />
                 </div>
@@ -194,7 +244,8 @@ export default function AdminDashboard() {
                     <select
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none bg-white"
+                      className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] 
+                                outline-none bg-white"
                     >
                       <option value="Single">Single</option>
                       <option value="Double">Double</option>
@@ -208,7 +259,8 @@ export default function AdminDashboard() {
                       type="number"
                       // value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                      className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none"
+                      className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] 
+                                outline-none"
                       placeholder="0.00"
                       min={0}
                     />
@@ -217,13 +269,13 @@ export default function AdminDashboard() {
 
                 {/* Row 3: Image URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload Image</label>
                   <input
-                    type="text"
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    type="file"
+                    // value={formData.image}
+                    accept='image/*'
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                     className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none"
-                    placeholder="https://example.com/image.jpg"
                   />
                 </div>
 
@@ -233,7 +285,8 @@ export default function AdminDashboard() {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none min-h-[100px]"
+                    className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] 
+                              outline-none min-h-[100px]"
                     placeholder="Enter room details..."
                   />
                 </div>
@@ -255,14 +308,15 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => setIsFormOpen(false)}
                     disabled={isSaving}
-                    className="px-5 py-2.5 text-gray-600 font-medium rounded-md hover:bg-gray-100 transition-colors"
+                    className="px-5 py-2.5 text-gray-600 font-medium rounded-md bg-gray-100 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="bg-[#7A633F] text-white px-6 py-2.5 rounded-md hover:bg-[#685333] transition-colors font-medium flex items-center disabled:opacity-70"
+                    className="bg-[#7A633F] text-white px-6 py-2.5 rounded-md hover:bg-[#685333] transition-colors 
+                                font-medium flex items-center disabled:opacity-70"
                   >
                     {isSaving ? 'Saving...' : 'Save Room Entry'}
                   </button>
