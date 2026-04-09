@@ -54,37 +54,39 @@ export default function AdminDashboard() {
   }, [])
 
   const handleSave = async () => {
-    setIsSaving(true)
+      setIsSaving(true)
 
-    const payload = {
-      ...formData,
-      amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
-    }
-
-    try {
-      const response = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null)
-        const errorMessage = errorData?.message || errorData?.error || `Server Error: ${response.status}`
-        throw new Error(errorMessage)
+      const payload = {
+          ...formData,
+          amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
       }
-      const data = await response.json()
 
-      setIsFormOpen(false)
-      resetForm()
-    
+      try {
+        const response = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null)
+          const errorMessage = errorData?.message || errorData?.error || `Server Error: ${response.status}`
+          throw new Error(errorMessage)
+        }
+        const data = await response.json()
+
+        setIsFormOpen(false)
+        router.refresh()
+        resetForm()
+      
     } catch (error) {
       console.error(error)
       alert('Something went wrong saving the room. (Check console)')
     } finally {
       setIsSaving(false)
+    
     }
   }
 

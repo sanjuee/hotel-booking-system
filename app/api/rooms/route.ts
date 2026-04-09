@@ -34,7 +34,7 @@ export async function GET(){
   try{
     const rooms = await prisma.room.findMany({
       orderBy: {
-        createdAt: 'desc'
+        price: 'desc'
       }
     })
 
