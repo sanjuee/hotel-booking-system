@@ -1,10 +1,9 @@
-// app/admin/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Room } from '@/types' // Adjust import path as needed
-// import { dummyRooms } from '@/data/MockRoomData' 
+import { Room } from '@/types' 
+import { error } from 'console'
 
 // Fallback dummy data based on the new schema if dummyRooms is empty
 const fallbackRooms = [
@@ -31,11 +30,9 @@ const fallbackRooms = [
 export default function AdminDashboard() {
   const router = useRouter()
   // Replace fallbackRooms with dummyRooms if you have it imported
-  const [rooms, setRooms] = useState<Room[]>(fallbackRooms) 
+  const [rooms, setRooms] = useState<Room[]>([]) 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  
-  // Form state aligned with Prisma schema
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -45,6 +42,28 @@ export default function AdminDashboard() {
     description: '',
     amenities: '', // Stored as comma-separated string in form, parsed to array on submit
   })
+
+  useEffect( () => {
+
+    const fetchRooms = async() => {
+        try{
+
+          const response = await fetch("/api/rooms")
+
+          if (!response.ok) throw new Error("Failed to fetch rooms");
+
+          const data = await response.json()
+          
+          setRooms(data.rooms)
+
+        }
+        catch(error) {
+          console.log(error)
+        }
+    }
+    fetchRooms()
+
+  }, [])
 
   const handleSave = async () => {
     setIsSaving(true)
