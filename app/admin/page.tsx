@@ -3,33 +3,11 @@
 import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
-import { error } from 'console'
 
-// Fallback dummy data based on the new schema if dummyRooms is empty
-const fallbackRooms = [
-  {
-    id: '1',
-    name: 'Editorial Suite (King)',
-    type: 'Suite',
-    price: 15000,
-    image: '',
-    description: 'Spacious suite with city views.',
-    amenities: ['Wi-Fi', 'Mini Bar', 'Room Service'],
-  },
-  {
-    id: '2',
-    name: 'The Curator\'s Loft',
-    type: 'Double',
-    price: 12000,
-    image: '',
-    description: 'Artistic loft space.',
-    amenities: ['Wi-Fi', 'Coffee Maker'],
-  }
-]
+
 
 export default function AdminDashboard() {
   const router = useRouter()
-  // Replace fallbackRooms with dummyRooms if you have it imported
   const [rooms, setRooms] = useState<Room[]>([]) 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -68,7 +46,6 @@ export default function AdminDashboard() {
   const handleSave = async () => {
     setIsSaving(true)
 
-    // Convert comma-separated string back to array for the DB
     const payload = {
       ...formData,
       amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
@@ -91,17 +68,11 @@ export default function AdminDashboard() {
       const data = await response.json()
 
       setIsFormOpen(false)
-      // setRooms((prevRooms) => [...prevRooms, data.room])
       resetForm()
-      // router.refresh()
+    
     } catch (error) {
       console.error(error)
       alert('Something went wrong saving the room. (Check console)')
-      
-      // FOR DEMO PURPOSES: Optimistic update if API fails during local testing
-      // setRooms((prevRooms) => [...prevRooms, { ...payload, id: Math.random().toString() }])
-      // setIsFormOpen(false)
-      // resetForm()
     } finally {
       setIsSaving(false)
     }
@@ -118,8 +89,6 @@ export default function AdminDashboard() {
       
 
       <div className="flex-1 overflow-y-auto p-8 md:p-12">
-        
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
             <h2 className="text-3xl font-serif font-bold text-gray-900">Rooms Inventory</h2>
@@ -136,7 +105,6 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* DATA TABLE */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">

@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import Link from 'next/link'
+import { LogOut, BedDouble } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <ul>
               <li className="border-l-4 border-[#8B6E4E] bg-white">
                 <a href="#" className="flex items-center px-8 py-3 text-[#8B6E4E] font-medium">
-                  <span className="mr-3">🛏️</span>
+                  <span className="mr-3"><BedDouble/></span>
                   Rooms Inventory
                 </a>
               </li>
@@ -23,8 +24,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         
         <div className="p-8 space-y-4">
-          <button className="flex items-center text-gray-600 hover:text-gray-900 transition-colors w-full">
-            <span className="mr-3">🚪</span> Logout
+          <button className="flex items-center text-gray-600 hover:text-gray-900 transition-colors w-full pl-2">
+            <span className="mr-3 hover:cursor-pointer"><LogOut/></span> Logout
           </button>
           <button className="w-full bg-secondary text-white py-3 rounded hover:bg-[#685333] transition-colors font-medium">
             Support
