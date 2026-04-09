@@ -4,6 +4,16 @@ import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
 
+interface RoomFormData {
+  id: string;
+  name: string;
+  type: string;
+  price: number;
+  image: string;
+  description: string;
+  amenities: string; 
+}
+
 
 
 export default function AdminDashboard() {
@@ -11,7 +21,7 @@ export default function AdminDashboard() {
   const [rooms, setRooms] = useState<Room[]>([]) 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RoomFormData>({
     id: '',
     name: '',
     type: 'Single',
@@ -30,7 +40,7 @@ export default function AdminDashboard() {
 
           if (!response.ok) throw new Error("Failed to fetch rooms");
 
-          const data = await response.json()
+          const data = await response.json() as { rooms: Room[] }
           
           setRooms(data.rooms)
 
@@ -194,10 +204,11 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Price / Night (₹) *</label>
                     <input
                       type="number"
-                      value={formData.price}
+                      // value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                       className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none"
                       placeholder="0.00"
+                      min={0}
                     />
                   </div>
                 </div>
