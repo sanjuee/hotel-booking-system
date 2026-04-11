@@ -4,7 +4,9 @@ import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
 import { createClient } from '@supabase/supabase-js'
-import { Edit } from 'lucide-react'
+import { Edit, UploadCloud } from 'lucide-react'
+import Image from 'next/image'
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -153,6 +155,8 @@ export default function AdminDashboard() {
     })
   }
 
+  const previewUrl = file ? URL.createObjectURL(file) : formData.image
+
   return (
     
       
@@ -296,15 +300,70 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Row 3: Image URL */}
+                {/* Row 3: Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Upload Image</label>
-                  <input
-                    type="file"
-                    // value={formData.image}
-                    accept='image/*'
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                    className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] outline-none"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Room Image</label>
+                  
+                  <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-300 px-6 py-10 relative hover:bg-gray-50 transition-colors group">
+                    
+                    {previewUrl ? (
+                      // Image Preview State
+                      <div className="relative w-full h-48 rounded-md overflow-hidden">
+                        <Image 
+                          src={previewUrl} 
+                          alt="Room preview" 
+                          fill
+                          className="object-cover" 
+                          unoptimized={true} 
+                        />
+                        {/* Hover Overlay with actions */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                          <label className="cursor-pointer bg-white text-gray-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors shadow-sm">
+                            Change Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFile(null);
+                              setFormData({ ...formData, image: '' });
+                            }}
+                            className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 transition-colors shadow-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Empty Upload State
+                      <div className="text-center">
+                        <UploadCloud className="mx-auto h-12 w-12 text-gray-300" strokeWidth={1.5} />
+                        <div className="mt-4 flex text-sm leading-6 text-gray-600 justify-center">
+                          <label
+                            htmlFor="file-upload"
+                            className="relative cursor-pointer rounded-md bg-transparent font-semibold text-[#8B6E4E] focus-within:outline-none hover:text-[#685333]"
+                          >
+                            <span>Upload a file</span>
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                            />
+                          </label>
+                          <p className="pl-1">or drag and drop</p>
+                        </div>
+                        <p className="text-xs leading-5 text-gray-500">PNG, JPG, WEBP up to 5MB</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Row 4: Description */}
