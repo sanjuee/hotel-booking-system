@@ -4,7 +4,7 @@ import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
 import { createClient } from '@supabase/supabase-js'
-import { Edit, UploadCloud } from 'lucide-react'
+import { Edit2, Trash2, UploadCloud } from 'lucide-react'
 import Image from 'next/image'
 
 
@@ -28,6 +28,7 @@ interface RoomFormData {
 export default function AdminDashboard() {
   const router = useRouter()
   const [rooms, setRooms] = useState<Room[]>([]) 
+  const [isLoading, setIsLoading] = useState(true)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [file, setFile] = useState<File | null>(null)
@@ -57,6 +58,9 @@ export default function AdminDashboard() {
         }
         catch(error) {
           console.log(error)
+        }
+        finally{
+          setIsLoading(false)
         }
     }
     fetchRooms()
@@ -192,48 +196,73 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {rooms.map((room) => (
-                  <tr key={room.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="p-5 font-medium text-gray-900">{room.name}</td>
-                    <td className="p-5 text-gray-600">{room.type}</td>
-                    <td className="p-5 text-gray-600">₹{room.price.toLocaleString()}</td>
-                    <td className="p-5 text-gray-500 text-sm truncate max-w-[200px]">
-                      {Array.isArray(room.amenities) ? room.amenities.join(', ') : 'None'}
-                    </td>
-                    <td className="p-5 flex flex-row justify-end gap-2">
-                      <button className=" bg-primary/20 text-green-700 px-1 py-1 rounded shadow-sm 
-                                    transition-colors text-[15px] flex items-center gap-2"
-                              onClick={() => {
-                                setFormData({
-                                    id: room.id,
-                                    name: room.name,
-                                    type: room.type,
-                                    price: room.price,
-                                    image: room.image,
-                                    description: room.description || "",
-                                    amenities: Array.isArray(room.amenities) ? room.amenities.join(", ") : "",
-                                })
-                                setIsFormOpen(true)
-                              }}
-                      >
-                        <Edit size={15}/> Edit
-                      </button>
-                      <button className=" bg-primary/20 text-red-700 px-1 py-1 rounded shadow-sm 
-                                    transition-colors text-xs flex items-center gap-2 uppercase"
-                              onClick={() => handleDelete(room.id)}
-                      >
-                        Delete
-                      </button>
-                      
-                    </td>
-                  </tr>
-                ))}
-                {rooms.length === 0 && (
+                {isLoading ? (
+                  // SKELETON LOADING STATE
+                  [...Array(4)].map((_, index) => (
+                    <tr key={`skeleton-${index}`} className="border-b border-gray-100 animate-pulse">
+                      <td className="p-5"><div className="h-4 bg-gray-200 rounded w-3/4"></div></td>
+                      <td className="p-5"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>
+                      <td className="p-5"><div className="h-4 bg-gray-200 rounded w-1/4"></div></td>
+                      <td className="p-5"><div className="h-4 bg-gray-200 rounded w-full"></div></td>
+                      <td className="p-5 flex justify-end gap-2">
+                        <div className="h-7 bg-gray-200 rounded w-16"></div>
+                        <div className="h-7 bg-gray-200 rounded w-16"></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : rooms.length === 0 ? (
+                  // EMPTY STATE
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-gray-500">
-                      No rooms found. Add a new room entry to get started.
+                    <td colSpan={5} className="p-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-4xl mb-3">🛏️</span>
+                        <p className="text-lg font-medium text-gray-900">No rooms found</p>
+                        <p className="text-sm mt-1">Add a new room entry to get started.</p>
+                      </div>
                     </td>
                   </tr>
+                ) : (
+                  // ACTUAL DATA STATE
+                  rooms.map((room) => (
+                    <tr key={room.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="p-5 font-medium text-gray-900">{room.name}</td>
+                      <td className="p-5 text-gray-600">{room.type}</td>
+                      <td className="p-5 text-gray-600">₹{Number(room.price).toLocaleString()}</td>
+                      <td className="p-5 text-gray-500 text-sm truncate max-w-[200px]">
+                        {Array.isArray(room.amenities) ? room.amenities.join(', ') : 'None'}
+                      </td>
+                      <td className="p-5">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            onClick={() => {
+                              setFormData({
+                                  id: room.id,
+                                  name: room.name,
+                                  type: room.type,
+                                  price: room.price,
+                                  image: room.image || "",
+                                  description: room.description || "",
+                                  amenities: Array.isArray(room.amenities) ? room.amenities.join(", ") : "",
+                              })
+                              setIsFormOpen(true)
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-[#8B6E4E] hover:bg-[#8B6E4E]/10 rounded-md transition-colors"
+                          >
+                            <Edit2 size={15} strokeWidth={2} />
+                            Edit
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleDelete(room.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          >
+                            <Trash2 size={15} strokeWidth={2} />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
