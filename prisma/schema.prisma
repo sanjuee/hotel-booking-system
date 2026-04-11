@@ -7,6 +7,8 @@ datasource db {
   provider = "postgresql"
 }
 
+
+// --------- 1. ROOM CATEGORY ------------
 model Room {
   id          String   @id @default(uuid())
   name        String
@@ -17,4 +19,45 @@ model Room {
   amenities   String[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  units        RoomUnit[]   //One Room Category can have many physical Room Units
+}
+
+// ------------2. ROOM UNTS-----------------
+model RoomUnit {
+  id          String   @id @default(uuid())
+  roomNumber  String   @unique
+  status      String   @default("AVAILABLE")   // AVAILABLE / BOOKED / MAINTENANCE
+
+  //Relation : Each unit belongs to a specific Room Category
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade) 
+
+  bookings    Booking[] // A single physical room can have a history of many bookings
+
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @updatedAt
+}
+
+
+// -------------3.  BOOKING TRANSACTION ------------
+model Booking {
+  id            String    @id @default(uuid())
+  guestName     String
+  email         String
+  phone         String
+  checkInDate   DateTime
+  checkOutDate  DateTime
+  specialReq    String?
+  
+  //  We save the total price here so if the hotel changes 
+  // their prices, old receip dont change.
+  totalPrice    Float     
+
+  // The Relation: This booking reserves a specific physical room
+  roomUnitId    String
+  roomUnit      RoomUnit  @relation(fields: [roomUnitId], references: [id], onDelete: Restrict)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
