@@ -4,6 +4,7 @@ import { useState,useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Room } from '@/types' 
 import { createClient } from '@supabase/supabase-js'
+import { Edit } from 'lucide-react'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +15,7 @@ interface RoomFormData {
   id: string;
   name: string;
   type: string;
-  price: number;
+  price: number | string;
   image: string;
   description: string;
   amenities: string; 
@@ -32,7 +33,7 @@ export default function AdminDashboard() {
     id: '',
     name: '',
     type: 'Single',
-    price: 0,
+    price: '',
     image: '',
     description: '',
     amenities: '', // Stored as comma-separated string in form, parsed to array on submit
@@ -64,7 +65,7 @@ export default function AdminDashboard() {
       setIsSaving(true)
 
       try {
-        let imageUrl= ""
+        let imageUrl= formData.image
 
         if (file) {
             
@@ -89,9 +90,11 @@ export default function AdminDashboard() {
           amenities: formData.amenities.split(',').map((item) => item.trim()).filter(Boolean)
         }
 
-
-        const response = await fetch('/api/rooms', {
-          method: 'POST',
+        const isUpdate = formData.id !== ''
+        const url = isUpdate ? `/api/rooms/${formData.id}` : `/api/rooms`
+        const method = isUpdate ? 'PUT' : 'POST'
+        const response = await fetch(url, {
+          method: method,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -103,10 +106,17 @@ export default function AdminDashboard() {
           const errorMessage = errorData?.message || errorData?.error || `Server Error: ${response.status}`
           throw new Error(errorMessage)
         }
-        const data = await response.json()
+        const savedRoom = await response.json()
+
+        if (isUpdate){
+          setRooms((prevRooms) => prevRooms.map((room) => room.id === formData.id ? savedRoom : room))
+        }
+        else{
+          setRooms((prevRooms) => ([...prevRooms, savedRoom]))
+        }
 
         setIsFormOpen(false)
-        router.refresh()
+        setFile(null)
         resetForm()
       
     } catch (error) {
@@ -139,7 +149,7 @@ export default function AdminDashboard() {
 
   const resetForm = () => {
     setFormData({
-      id: '', name: '', type: 'Single', price: 0, image: '', description: '', amenities: ''
+      id: '', name: '', type: 'Single', price: '', image: '', description: '', amenities: ''
     })
   }
 
@@ -186,13 +196,31 @@ export default function AdminDashboard() {
                     <td className="p-5 text-gray-500 text-sm truncate max-w-[200px]">
                       {Array.isArray(room.amenities) ? room.amenities.join(', ') : 'None'}
                     </td>
-                    <td className="p-5 text-right">
-                      <button className=" bg-primary/20 text-red-600 px-2 py-2 rounded shadow-sm 
-                                    transition-colors text-xs flex items-center gap-2"
+                    <td className="p-5 flex flex-row justify-end gap-2">
+                      <button className=" bg-primary/20 text-green-700 px-1 py-1 rounded shadow-sm 
+                                    transition-colors text-[15px] flex items-center gap-2"
+                              onClick={() => {
+                                setFormData({
+                                    id: room.id,
+                                    name: room.name,
+                                    type: room.type,
+                                    price: room.price,
+                                    image: room.image,
+                                    description: room.description || "",
+                                    amenities: Array.isArray(room.amenities) ? room.amenities.join(", ") : "",
+                                })
+                                setIsFormOpen(true)
+                              }}
+                      >
+                        <Edit size={15}/> Edit
+                      </button>
+                      <button className=" bg-primary/20 text-red-700 px-1 py-1 rounded shadow-sm 
+                                    transition-colors text-xs flex items-center gap-2 uppercase"
                               onClick={() => handleDelete(room.id)}
                       >
-                        DETETE
+                        Delete
                       </button>
+                      
                     </td>
                   </tr>
                 ))}
@@ -257,8 +285,8 @@ export default function AdminDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Price / Night (₹) *</label>
                     <input
                       type="number"
-                      // value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       className="w-full border border-gray-300 p-2.5 rounded-md focus:ring-2 focus:ring-[#8B6E4E] 
                                 outline-none"
                       placeholder="0.00"
