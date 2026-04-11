@@ -131,8 +131,8 @@ export default function SearchAvailabiltyBar(){
                     </div>
 
                     {/* Submit Button */}
-                    <button className="bg-secondary text-on-secondary px-8 py-5 md:py-6 uppercase tracking-widest font-medium text-l 
-                                    md:rounded-r-2xl hover:brightness-90 hover:cursor-pointer transition-all flex items-center justify-center md:min-w-[200px]">
+                    <button className="bg-secondary text-on-secondary px-8 py-5 md:py-6 uppercase tracking-widest font-medium text-l rounded-b-2xl 
+                                    md:rounded-r-2xl  md:rounded-bl-none hover:brightness-90 hover:cursor-pointer transition-all flex items-center justify-center md:min-w-[200px]">
                         Search Availability
                     </button>
                 </div>

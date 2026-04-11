@@ -13,7 +13,6 @@ export default function RoomCard({ room }: { room: Room }) {
           alt={room.name} 
           fill
           className="absolute inset-0 w-full h-full object-cover" 
-          unoptimized={true} //remove this line in production
         />
       </div>
 
