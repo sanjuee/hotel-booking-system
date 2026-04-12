@@ -1,6 +1,7 @@
 // components/RoomCard.tsx
 import { Room } from '../types'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function RoomCard({ room }: { room: Room }) {
   return (
@@ -41,9 +42,12 @@ export default function RoomCard({ room }: { room: Room }) {
       {/* 3. RIGHT SECTION: Booking Action */}
       <div className="p-6 border-t md:border-t-0 md:border-l border-outline flex flex-col justify-center items-center md:w-56">
         {/* Using opacity-90 for hover state instead of a hardcoded lighter color */}
-        <button className="bg-secondary text-on-secondary px-8 py-2.5 rounded-full font-medium shadow-sm hover:opacity-90 transition w-full">
+        <Link   href={`/book?roomId=${room.id}`}
+                className="flex justify-center bg-secondary text-on-secondary px-8 py-2.5 rounded-full font-medium shadow-sm hover:opacity-90 transition 
+                    w-full"
+        >
           Book Now
-        </button>
+        </Link>
       </div>
 
     </div>

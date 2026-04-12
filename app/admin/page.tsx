@@ -146,13 +146,9 @@ export default function AdminDashboard() {
   const previewUrl = file ? URL.createObjectURL(file) : formData.image
 
   return (
-      // Added responsive padding (p-4 for mobile, md:p-12 for desktop)
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-12 bg-[#FDFBF7] min-h-screen">
-        
-        {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 gap-4">
           <div>
-            {/* Scaled text for mobile */}
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-gray-900">Rooms Inventory</h2>
             <p className="text-sm sm:text-base text-gray-500 mt-1">Manage room details, pricing, and amenities.</p>
           </div>
@@ -161,17 +157,13 @@ export default function AdminDashboard() {
               resetForm()
               setIsFormOpen(true)
             }}
-            // Full width on mobile (w-full sm:w-auto), centered content
             className="w-full sm:w-auto justify-center bg-[#7A633F] text-white px-5 py-2.5 rounded shadow-sm hover:bg-[#685333] 
                       transition-colors font-medium flex items-center gap-2"
           >
             <span>+</span> New Room Entry
           </button>
         </div>
-
-        {/* Table Container */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {/* Horizontal scroll enabled on this div. min-w-[800px] on the table ensures it doesn't squash */}
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
@@ -185,7 +177,6 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  // SKELETON LOADING STATE
                   [...Array(4)].map((_, index) => (
                     <tr key={`skeleton-${index}`} className="border-b border-gray-100 animate-pulse">
                       <td className="p-4 sm:p-5"><div className="h-4 bg-gray-200 rounded w-3/4"></div></td>
@@ -199,7 +190,6 @@ export default function AdminDashboard() {
                     </tr>
                   ))
                 ) : rooms.length === 0 ? (
-                  // EMPTY STATE
                   <tr>
                     <td colSpan={5} className="p-8 sm:p-12 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center">
@@ -210,7 +200,6 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  // ACTUAL DATA STATE
                   rooms.map((room) => (
                     <tr key={room.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="p-4 sm:p-5 font-medium text-gray-900">{room.name}</td>
@@ -261,18 +250,14 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ADD/EDIT MODAL */}
         {isFormOpen && (
-          // Adjusted padding to zero on extreme mobile, keeping it a bit separated on sm screens
           <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-            {/* Added rounded-t-xl for bottom-sheet effect on mobile, full rounded on desktop */}
             <div className="bg-white p-5 sm:p-8 rounded-t-2xl sm:rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:fade-in duration-200">
               <h2 className="text-xl sm:text-2xl font-serif font-bold mb-5 sm:mb-6 text-gray-900">
                 {formData.id ? 'Edit Room' : 'New Room Entry'}
               </h2>
 
               <div className="space-y-4 sm:space-y-5">
-                {/* Row 1: Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Room Name *</label>
                   <input
@@ -284,7 +269,6 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Row 2: Type & Price - Stacks on mobile, side-by-side on sm+ */}
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
                   <div className="w-full sm:w-1/2">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Room Type *</label>
@@ -312,7 +296,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Row 3: Image Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Room Image</label>
                   <div className="mt-1 flex justify-center rounded-lg border border-dashed border-gray-300 px-4 sm:px-6 py-8 sm:py-10 relative hover:bg-gray-50 transition-colors group">
@@ -373,7 +356,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Row 4: Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
                   <textarea
@@ -384,7 +366,6 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Row 5: Amenities */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Amenities (Comma separated)</label>
                   <input
@@ -396,7 +377,6 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                {/* Action Buttons - Stack on mobile, inline on desktop */}
                 <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-100 mt-6 pb-2 sm:pb-0">
                   <button
                     onClick={() => setIsFormOpen(false)}
