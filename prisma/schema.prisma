@@ -36,7 +36,7 @@ model RoomUnit {
   bookings    Booking[] // A single physical room can have a history of many bookings
 
   createdAt   DateTime  @default(now())
-  updateAt    DateTime  @updatedAt
+  updatedAt    DateTime  @updatedAt
 }
 
 
