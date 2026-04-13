@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Info } from 'lucide-react' // <-- Added this import
+import { Info, CheckCircle } from 'lucide-react' // <-- Added CheckCircle
 
 export default function BookingPage() {
   const searchParams = useSearchParams()
@@ -10,6 +10,7 @@ export default function BookingPage() {
   const roomId = searchParams?.get('roomId') 
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false) // <-- New success state
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     guestName: '',
@@ -55,7 +56,7 @@ export default function BookingPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault() 
 
     if (!roomId) {
@@ -71,7 +72,6 @@ export default function BookingPage() {
     setIsSubmitting(true)
 
     try {
-
       const payload = {...formData, roomId: roomId }
       const response = await fetch("/api/bookings",{
         method: 'POST',
@@ -81,12 +81,11 @@ export default function BookingPage() {
         body: JSON.stringify(payload)
       })
 
-      const data = await response.json()
-
       if (!response.ok) throw new Error("Booking failed");
 
-      alert("Booking Successful! Check your email/WhatsApp.")
-      router.push("/")
+      // Trigger the success UI instead of the alert
+      setIsSuccess(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
 
     } catch (error) {
       console.error(error)
@@ -103,6 +102,31 @@ export default function BookingPage() {
     }
   }
 
+  // --- SUCCESS VIEW ---
+  // If the booking succeeds, render this card instead of the form.
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="max-w-lg w-full p-8 sm:p-12 bg-white shadow-xl rounded-2xl border border-gray-100 text-center animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle className="h-10 w-10 text-green-600" strokeWidth={2} />
+          </div>
+          <h2 className="text-3xl font-serif font-bold text-gray-900 mb-4">Booking Confirmed!</h2>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            Thank you, <span className="font-medium text-gray-900">{formData.guestName}</span>. Your reservation has been successfully placed. We've sent the complete booking details and arrival instructions to <strong className="text-gray-900">{formData.email}</strong>.
+          </p>
+          <button 
+            onClick={() => router.push("/")}
+            className="w-full bg-[#7A633F] text-white py-3.5 rounded-lg font-medium tracking-wide hover:bg-[#685333] transition-all shadow-md hover:shadow-lg"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // --- FORM VIEW ---
   return (
     <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto p-8 sm:p-10 bg-white shadow-xl rounded-2xl border border-gray-100">
@@ -217,6 +241,7 @@ export default function BookingPage() {
               </p>
             </div>
           </div>
+
           <div className="pt-2">
             <button 
               type="submit" 
