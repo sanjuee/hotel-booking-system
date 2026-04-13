@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { sendBookingEmails } from "@/lib/email"
 
 export async function POST(request: Request){
     try {
@@ -46,6 +47,8 @@ export async function POST(request: Request){
 
             return booking
         })
+
+        sendBookingEmails(newBooking, availableUnit.roomNumber)
 
         return NextResponse.json(
             { meassage: "Booking Confirmed!", booking: newBooking },

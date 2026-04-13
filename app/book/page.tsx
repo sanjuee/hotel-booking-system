@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Info, CheckCircle } from 'lucide-react' // <-- Added CheckCircle
+import { Info, CheckCircle } from 'lucide-react'
 
 export default function BookingPage() {
   const searchParams = useSearchParams()
@@ -80,8 +80,8 @@ export default function BookingPage() {
         },
         body: JSON.stringify(payload)
       })
-
-      if (!response.ok) throw new Error("Booking failed");
+      const data = await response.json()
+      if (!response.ok) throw new Error( data.error ||  "Booking failed");
 
       // Trigger the success UI instead of the alert
       setIsSuccess(true)
@@ -89,7 +89,7 @@ export default function BookingPage() {
 
     } catch (error) {
       console.error(error)
-      alert("Something went wrong.")
+      alert(error)
     } finally {
       setIsSubmitting(false)
     }
