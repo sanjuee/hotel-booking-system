@@ -45,6 +45,7 @@ export default function AdminDashboard() {
     description: '',
     amenities: '',
   })
+  
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
   const [roomUnits, setRoomUnits] = useState<RoomUnit[]>([])
   const [newUnitNumber, setNewUnitNumber] = useState('')
@@ -154,7 +155,6 @@ export default function AdminDashboard() {
   const fetchUnits = async (roomId: string) => {
     setActiveRoomId(roomId)
     setIsUnitModalOpen(true)
-    // Fetch the existing units for this room when clicked
     try {
       const res = await fetch(`/api/room-units?roomId=${roomId}`)
       if (res.ok) {
@@ -177,9 +177,8 @@ export default function AdminDashboard() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         
-        // Instantly update UI with the new room
         setRoomUnits([...roomUnits, data]); 
-        setNewUnitNumber(''); // Clear input
+        setNewUnitNumber(''); 
       } catch (err: any) {
         alert(err.message);
       }
@@ -215,26 +214,20 @@ export default function AdminDashboard() {
             resetForm()
             setIsFormOpen(true)
           }}
-          className="w-full sm:w-auto justify-center bg-[#7A633F] text-white px-5 py-2.5 rounded shadow-sm hover:bg-[#685333] 
-                      transition-colors font-medium flex items-center gap-2"
+          className="w-full sm:w-auto justify-center bg-[#7A633F] text-white px-5 py-2.5 rounded shadow-sm hover:bg-[#685333] transition-colors font-medium flex items-center gap-2"
         >
           <span>+</span> New Room Entry
         </button>
       </div>
+
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider bg-gray-50/50">
-                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">
-                  Room Name
-                </th>
-                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">
-                  Room Type
-                </th>
-                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">
-                  Price
-                </th>
+                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">Room Name</th>
+                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">Room Type</th>
+                <th className="p-4 sm:p-5 font-medium whitespace-nowrap">Price</th>
                 <th className="p-4 sm:p-5 font-medium">Amenities</th>
                 <th className="p-4 sm:p-5 font-medium text-right">Actions</th>
               </tr>
@@ -246,18 +239,10 @@ export default function AdminDashboard() {
                     key={`skeleton-${index}`}
                     className="border-b border-gray-100 animate-pulse"
                   >
-                    <td className="p-4 sm:p-5">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    </td>
-                    <td className="p-4 sm:p-5">
-                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    </td>
-                    <td className="p-4 sm:p-5">
-                      <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                    </td>
-                    <td className="p-4 sm:p-5">
-                      <div className="h-4 bg-gray-200 rounded w-full"></div>
-                    </td>
+                    <td className="p-4 sm:p-5"><div className="h-4 bg-gray-200 rounded w-3/4"></div></td>
+                    <td className="p-4 sm:p-5"><div className="h-4 bg-gray-200 rounded w-1/2"></div></td>
+                    <td className="p-4 sm:p-5"><div className="h-4 bg-gray-200 rounded w-1/4"></div></td>
+                    <td className="p-4 sm:p-5"><div className="h-4 bg-gray-200 rounded w-full"></div></td>
                     <td className="p-4 sm:p-5 flex justify-end gap-2">
                       <div className="h-8 bg-gray-200 rounded w-16"></div>
                       <div className="h-8 bg-gray-200 rounded w-16"></div>
@@ -272,12 +257,8 @@ export default function AdminDashboard() {
                   >
                     <div className="flex flex-col items-center justify-center">
                       <span className="text-4xl mb-3">🛏️</span>
-                      <p className="text-lg font-medium text-gray-900">
-                        No rooms found
-                      </p>
-                      <p className="text-sm mt-1">
-                        Add a new room entry to get started.
-                      </p>
+                      <p className="text-lg font-medium text-gray-900">No rooms found</p>
+                      <p className="text-sm mt-1">Add a new room entry to get started.</p>
                     </div>
                   </td>
                 </tr>
@@ -300,41 +281,44 @@ export default function AdminDashboard() {
                         : 'None'}
                     </td>
                     <td className="p-4 sm:p-5">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
                         <button
-                          className="bg-primary/20 text-blue-700 px-2 py-2 mr-4 rounded shadow-sm transition-colors text-xs font-medium cursor-pointer "
+                          className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-md shadow-sm transition-colors text-xs font-medium hover:bg-blue-100"
                           onClick={() => fetchUnits(room.id)}
                         >
                           Manage Units
                         </button>
-                        <button
-                          onClick={() => {
-                            setFormData({
-                              id: room.id,
-                              name: room.name,
-                              type: room.type,
-                              price: room.price,
-                              image: room.image || '',
-                              description: room.description || '',
-                              amenities: Array.isArray(room.amenities)
-                                ? room.amenities.join(', ')
-                                : '',
-                            })
-                            setIsFormOpen(true)
-                          }}
-                          className="flex items-center gap-1.5 px-1 py-1 sm:py-1.5 text-sm font-medium text-gray-500 hover:text-[#8B6E4E] hover:bg-[#8B6E4E]/10 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Edit2 size={15} strokeWidth={2} />
-                          {/* <span className="hidden sm:inline">Edit</span> */}
-                        </button>
+                        
+                        <div className="flex items-center gap-1 border-l border-gray-200 pl-3">
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                id: room.id,
+                                name: room.name,
+                                type: room.type,
+                                price: room.price,
+                                image: room.image || '',
+                                description: room.description || '',
+                                amenities: Array.isArray(room.amenities)
+                                  ? room.amenities.join(', ')
+                                  : '',
+                              })
+                              setIsFormOpen(true)
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-[#8B6E4E] hover:bg-[#8B6E4E]/10 rounded-md transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 size={16} strokeWidth={2} />
+                          </button>
 
-                        <button
-                          onClick={() => handleDelete(room.id)}
-                          className="flex items-center gap-1.5 px-1 py-1 sm:py-1.5 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                        >
-                          <Trash2 size={15} strokeWidth={2} />
-                          {/* <span className="hidden sm:inline">Delete</span> */}
-                        </button>
+                          <button
+                            onClick={() => handleDelete(room.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} strokeWidth={2} />
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -351,6 +335,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* ADD/EDIT ROOM MODAL */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
           <div className="bg-white p-5 sm:p-8 rounded-t-2xl sm:rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:fade-in duration-200">
@@ -529,13 +514,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      
       {/* MANAGE UNITS MODAL */}
       {isUnitModalOpen && activeRoomId && (
         <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white p-8 rounded-xl w-full max-w-md shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-serif font-bold text-gray-900">Manage Physical Rooms</h2>
-              <button onClick={() => { setIsUnitModalOpen(false); setActiveRoomId(null); }} className="text-gray-500 hover:text-gray-800">✕</button>
+              <button onClick={() => { setIsUnitModalOpen(false); setActiveRoomId(null); }} className="text-gray-500 hover:text-gray-800 text-xl font-bold">✕</button>
             </div>
 
             {/* Add New Unit Form */}
@@ -548,7 +534,7 @@ export default function AdminDashboard() {
                 className="flex-1 p-2 border border-gray-300 rounded outline-none focus:ring-2 focus:ring-[#8B6E4E]"
               />
               <button 
-                className="bg-[#7A633F] text-white px-4 py-2 rounded hover:bg-[#685333] transition-colors"
+                className="bg-[#7A633F] text-white px-5 py-2 rounded hover:bg-[#685333] transition-colors font-medium"
                 onClick={handleRoomUnitSave}
               >
                 Add
@@ -562,9 +548,9 @@ export default function AdminDashboard() {
               ) : (
                 <ul className="space-y-2">
                   {roomUnits.map((unit) => (
-                    <li key={unit.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-lg">
+                    <li key={unit.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-lg bg-white">
                       <span className="font-bold text-gray-800">Room {unit.roomNumber}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium tracking-wide ${
                         unit.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
                         unit.status === 'BOOKED' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
