@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function sendBookingEmails(booking: any, roomNumber: string) {
+export async function sendBookingEmails(booking: any, roomNumber: string, roomCategory: string) {
   try {
     // 1. SEND TO MANAGEMENT (Front Desk)
     await resend.emails.send({
@@ -32,7 +32,7 @@ export async function sendBookingEmails(booking: any, roomNumber: string) {
           <p>Hi ${booking.guestName},</p>
           <p>Thank you for choosing us! Your booking is confirmed.</p>
           <div style="background-color: #f4f4f4; padding: 15px; border-radius: 5px;">
-            <p><strong>Room Number:</strong> ${roomNumber}</p>
+            <p><strong>Room Type:</strong> ${roomCategory}</p>
             <p><strong>Check-in:</strong> ${new Date(booking.checkInDate).toLocaleDateString()}</p>
             <p><strong>Check-out:</strong> ${new Date(booking.checkOutDate).toLocaleDateString()}</p>
           </div>
