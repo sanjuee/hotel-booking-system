@@ -55,7 +55,7 @@ export default function SearchAvailabiltyBar() {
     }, []);
 
     return (
-        <div className="flex flex-col md:flex-row items-stretch rounded-2xl shadow-xl border border-outline w-full lg:w-auto z-50 relative bg-white overflow-visible">
+        <div className="flex flex-col md:flex-row items-stretch rounded-2xl shadow-xl border border-outline w-full lg:w-auto  relative bg-white overflow-visible">
             
             {/* Check In */}
             <div className="flex-1 border-b md:border-b-0 md:border-r border-outline min-w-40 rounded-t-2xl md:rounded-tr-none md:rounded-l-2xl overflow-hidden">

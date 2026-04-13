@@ -23,8 +23,8 @@ export default function Hero() {
                         </a>
                     </div>
                 </div>
-                <div className="w-full lg:w-auto flex flex-col gap-1 sm:gap-4">
-                    <span className="text-lg sm:text-xl font-headline text-secondary font-extralight italic ml-1 sm:ml-2">
+                <div className="w-full lg:w-auto flex flex-col  items-center gap-1 sm:items-start">
+                    <span className="text-xl sm:text-2xl font-headline text-secondary font-extralight italic ml-1 sm:ml-4`">
                         Check room availability
                     </span>
                     <div className="w-full">
