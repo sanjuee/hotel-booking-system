@@ -48,7 +48,7 @@ export async function POST(request: Request){
             return booking
         })
 
-        sendBookingEmails(newBooking, availableUnit.roomNumber)
+        sendBookingEmails(newBooking, availableUnit.roomNumber, roomCategory.name)
 
         return NextResponse.json(
             { meassage: "Booking Confirmed!", booking: newBooking },
