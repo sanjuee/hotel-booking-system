@@ -27,7 +27,7 @@ model Room {
 model RoomUnit {
   id          String   @id @default(uuid())
   roomNumber  String   @unique
-  status      String   @default("AVAILABLE")   // AVAILABLE / BOOKED / MAINTENANCE
+  status      String   @default("AVAILABLE")   // AVAILABLE / BOOKED / OCCUPIED / MAINTENANCE
 
   //Relation : Each unit belongs to a specific Room Category
   roomId      String
