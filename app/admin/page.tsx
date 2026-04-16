@@ -1,10 +1,9 @@
-// app/admin/front-desk/page.tsx
+
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react' // <-- New Import
+import { Search } from 'lucide-react' 
 
-// Define the exact shape of the data coming from our new API
 interface FrontDeskUnit {
   id: string
   roomNumber: string
@@ -24,7 +23,6 @@ export default function FrontDesk() {
   >('ALL')
   const [searchQuery, setSearchQuery] = useState('') // <-- New Search State
 
-  // Fetch all rooms on load
   useEffect(() => {
     fetchRooms()
   }, [])
@@ -43,7 +41,6 @@ export default function FrontDesk() {
     }
   }
 
-  // Handle manual status changes by the receptionist
   const handleStatusChange = async (unitId: string, newStatus: string) => {
     setUnits((prev) =>
       prev.map((u) =>
@@ -65,7 +62,6 @@ export default function FrontDesk() {
     }
   }
 
-  // <-- UPDATED FILTER LOGIC: Combines both status tab AND search input
   const filteredUnits = units.filter((u) => {
     const matchesFilter = filter === 'ALL' ? true : u.status === filter
     const matchesSearch = u.roomNumber
@@ -78,7 +74,7 @@ export default function FrontDesk() {
     return <div className="p-12 text-center">Loading Front Desk...</div>
 
   return (
-    <div className="p-8 md:p-12 min-h-screen bg-gray-50/50">
+    <div className="p-8 md:p-12 min-h-screen bg-white">
       <div className="mb-8">
         <h1 className="text-3xl font-serif font-bold text-gray-900">
           Live Front Desk
@@ -88,9 +84,8 @@ export default function FrontDesk() {
         </p>
       </div>
 
-      {/* CONTROLS: Filter Buttons & Search Bar */}
+      
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-8">
-        {/* FILTER BUTTONS */}
         <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 w-full xl:w-auto hide-scrollbar">
           {['ALL', 'AVAILABLE', 'BOOKED', 'OCCUPIED', 'MAINTENANCE'].map(
             (statusOption) => (
@@ -99,7 +94,7 @@ export default function FrontDesk() {
                 onClick={() => setFilter(statusOption as any)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                   filter === statusOption
-                    ? 'bg-[#7A633F] text-white shadow-md' // Updated to match your boutique theme
+                    ? 'bg-blue-700 text-white shadow-md' // Updated to match your boutique theme
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
                 }`}
               >
@@ -109,7 +104,7 @@ export default function FrontDesk() {
           )}
         </div>
 
-        {/* SEARCH BAR */}
+        
         <div className="relative w-full xl:w-72 shrink-0">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
@@ -120,12 +115,11 @@ export default function FrontDesk() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none 
-                        focus:ring-2 focus:ring-[#8B6E4E] focus:border-[#8B6E4E] transition-all text-sm shadow-sm"
+                        focus:ring-2 focus:ring-blue-700 focus:border-blue-800 transition-all text-sm shadow-sm"
           />
         </div>
       </div>
 
-      {/* ROOM GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filteredUnits.map((unit) => (
           <div
@@ -145,7 +139,6 @@ export default function FrontDesk() {
                 {unit.roomNumber}
               </h3>
 
-              {/* STATUS INDICATOR DOT */}
               <div
                 className={`h-3 w-3 rounded-full mt-2 shrink-0 ${
                   unit.status === 'AVAILABLE'
@@ -166,7 +159,6 @@ export default function FrontDesk() {
               <p className="text-xs text-gray-500">{unit.room?.type}</p>
             </div>
 
-            {/* RECEPTIONIST ACTION: Change Status */}
             <select
               value={unit.status}
               onChange={(e) => handleStatusChange(unit.id, e.target.value)}

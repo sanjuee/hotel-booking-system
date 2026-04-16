@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { unstable_isUnrecognizedActionError } from "next/dist/client/components/navigation.react-server";
 
 export async function GET() {
     try {
