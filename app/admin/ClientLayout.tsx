@@ -2,7 +2,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Menu, X, BedDouble, LifeBuoy, LogOut, Building2, UserCircle } from 'lucide-react'
+import { Menu, X, BedDouble, LifeBuoy, LogOut, Building2, UserCircle, BookUser } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation' 
 import { createClient } from '@/utils/supabase/client'
@@ -88,7 +88,17 @@ export default function ClientLayout({
                   onClick={() => setIsSidebarOpen(false)}
                 >
                   <Building2 size={20} className="mr-3" />
-                  Live Front Desk
+                  Front Desk
+                </Link>
+              </li>
+              <li className={`transition-colors ${pathname === '/admin/bookings' ? 'border-l-4 border-blue-600 bg-blue-50/50' : 'border-l-4 border-transparent hover:bg-slate-100'}`}>
+                <Link 
+                  href="/admin/bookings" 
+                  className={`flex items-center px-6 md:px-8 py-3.5 md:py-3 font-medium ${pathname === '/admin/bookings' ? 'text-blue-600' : 'text-slate-600'}`}
+                  onClick={() => setIsSidebarOpen(false)}
+                >
+                  <BookUser size={20} className="mr-3" />
+                  Bookings
                 </Link>
               </li>
             </ul>

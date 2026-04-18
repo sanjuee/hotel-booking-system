@@ -29,7 +29,7 @@ export default function FrontDesk() {
 
   const fetchRooms = async () => {
     try {
-      const res = await fetch('/api/front-desk')
+      const res = await fetch('/api/admin/front-desk')
       if (res.ok) {
         const data = await res.json()
         setUnits(data)
@@ -81,7 +81,7 @@ export default function FrontDesk() {
     <div className="p-8 md:p-12 min-h-screen bg-white">
       <div className="mb-8">
         <h1 className="text-3xl font-serif font-bold text-gray-900">
-          Live Front Desk
+          Front Desk
         </h1>
         <p className="text-gray-500 mt-1">
           Manage physical room statuses and walk-in availability.
