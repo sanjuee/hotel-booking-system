@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react' 
+import { Search, Loader2 } from 'lucide-react' 
 
 interface FrontDeskUnit {
   id: string
@@ -71,7 +71,11 @@ export default function FrontDesk() {
   })
 
   if (isLoading)
-    return <div className="p-12 text-center">Loading Front Desk...</div>
+
+    return (<div className="min-h-screen flex items-center justify-center -mt-10">
+                <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5 text-blue-700" />
+                <div className="text-lg">Loading Front Desk...</div>
+            </div>)
 
   return (
     <div className="p-8 md:p-12 min-h-screen bg-white">
