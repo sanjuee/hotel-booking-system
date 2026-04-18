@@ -7,6 +7,7 @@ import { Room } from '@/types'
 import { createClient } from '@supabase/supabase-js'
 import { Edit2, Trash2, UploadCloud, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
+import { Caprasimo } from 'next/font/google'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +21,7 @@ interface RoomFormData {
   price: number | string
   image: string
   description: string
+  capacity: number | string 
   amenities: string
 }
 
@@ -44,6 +46,7 @@ export default function ManageRoomInventory() {
     price: '',
     image: '',
     description: '',
+    capacity: '',
     amenities: '',
   })
   
@@ -79,6 +82,7 @@ export default function ManageRoomInventory() {
     if (!formData.price || Number(formData.price) <= 0) newErrors.price = 'A valid price is required'
     if (!file && !formData.image) newErrors.image = 'An image is required'
     if (!formData.description.trim()) newErrors.description = 'Description is required'
+    if (!formData.capacity || Number(formData.capacity) <= 0) newErrors.capacity = 'Enter maximum people that can be occupied'
     if (!formData.amenities.trim()) newErrors.amenities = 'At least speacify AC / NON AC'
 
     setErrors(newErrors)
@@ -213,6 +217,7 @@ export default function ManageRoomInventory() {
       price: '',
       image: '',
       description: '',
+      capacity: '',
       amenities: '',
     })
     setErrors({}) // Clear errors on reset
@@ -322,6 +327,7 @@ export default function ManageRoomInventory() {
                                 price: room.price,
                                 image: room.image || '',
                                 description: room.description || '',
+                                capacity: room.capacity,
                                 amenities: Array.isArray(room.amenities)
                                   ? room.amenities.join(', ')
                                   : '',
@@ -420,9 +426,29 @@ export default function ManageRoomInventory() {
                       errors.price ? 'border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600'
                     }`}
                     placeholder="0.00"
+                    step={1}
                     min={0}
                   />
                   {errors.price && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12}/> {errors.price}</p>}
+                </div>
+                <div className="w-full sm:w-1/2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Capacity (Max people) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.capacity}
+                    onChange={(e) => {
+                      setFormData({ ...formData, capacity: e.target.value })
+                      if (errors.capacity) setErrors({ ...errors, capacity: '' })
+                    }}
+                    className={`w-full border p-2.5 rounded-md outline-none transition-all ${
+                      errors.capacity ? 'border-red-500 focus:ring-2 focus:ring-red-200' : 'border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600'
+                    }`}
+                    placeholder="0"
+                    min={1}
+                  />
+                  {errors.capacity && <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={20}/> {errors.capacity}</p>}
                 </div>
               </div>
 

@@ -12,6 +12,7 @@ export async function POST(request: Request) {
         type: body.type,
         image: body.image,
         description: body.description,
+        capacity: parseInt(body.capacity),
         price: parseFloat(body.price),
         amenities: Array.isArray(body.amenities)
           ? body.amenities
