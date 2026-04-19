@@ -24,3 +24,21 @@ export interface Booking {
     room: { name: string };
   };
 }
+
+export interface RoomUnit {
+  id: string;
+  roomNumber: string;
+  status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'; 
+  room: { name: string };
+  bookings?: { 
+    guestName: string;
+    status: 'CONFIRMED' | 'CHECKED_IN'; 
+    checkInDate: string;                 
+  }[];
+}
+
+export interface DashboardData {
+  arrivals: Booking[];
+  noShows: Booking[];
+  liveRooms: RoomUnit[];
+}

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import {
   Users,
   AlertCircle,
@@ -11,30 +10,13 @@ import {
   ArrowRight,
   UserCircle,
 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { DashboardData } from '@/types'
+import FrontDeskRoomCard from '@/components/admin/FrontDeskRoomCard';
 
-// --- TypeScript Interfaces ---
-interface RoomUnit {
-  id: string
-  roomNumber: string
-  status: 'AVAILABLE' | 'OCCUPIED' | 'DIRTY' | 'MAINTENANCE'
-  room: { name: string }
-  bookings?: { guestName: string }[]
-}
 
-interface Booking {
-  id: string
-  guestName: string
-  checkInDate: string
-  checkOutDate: string
-  roomUnit: RoomUnit
-}
 
-interface DashboardData {
-  arrivals: Booking[]
-  noShows: Booking[]
-  liveRooms: RoomUnit[]
-}
 
 export default function FrontDeskDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -67,7 +49,7 @@ export default function FrontDeskDashboard() {
   // The Action Handler (The Hands)
   const handleAction = async (
     bookingId: string,
-    action: 'CHECK_IN' | 'NO_SHOW',
+    action: 'CHECKED_IN' | 'NO_SHOW',
     roomUnitId?: string
   ) => {
     if (
@@ -95,6 +77,36 @@ export default function FrontDeskDashboard() {
       setIsProcessing(null)
     }
   }
+
+  // --- THE SORTING ENGINE ---
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const occupiedRooms = data?.liveRooms.filter(r => r.status === 'OCCUPIED') || [];
+  
+  const allAvailableRooms = data?.liveRooms.filter(r => r.status === 'AVAILABLE') || [];
+
+  // Group 1: Incoming Today (High Danger)
+  const incomingTodayRooms = allAvailableRooms.filter(room => {
+    const nextBooking = room.bookings?.find(b => b.status === 'CONFIRMED');
+    if (!nextBooking) return false;
+    const checkIn = new Date(nextBooking.checkInDate);
+    return checkIn.getTime() === today.getTime();
+  });
+
+  // Group 2: Future Booked (Medium Danger)
+  const futureBookedRooms = allAvailableRooms.filter(room => {
+    const nextBooking = room.bookings?.find(b => b.status === 'CONFIRMED');
+    if (!nextBooking) return false;
+    const checkIn = new Date(nextBooking.checkInDate);
+    return checkIn.getTime() > today.getTime();
+  });
+
+  // Group 3: Completely Free (Zero Danger)
+  const completelyFreeRooms = allAvailableRooms.filter(room => {
+    const hasIncoming = room.bookings?.some(b => b.status === 'CONFIRMED');
+    return !hasIncoming;
+  }); 
 
   if (isLoading) {
     return (
@@ -168,62 +180,56 @@ export default function FrontDeskDashboard() {
           </div>
 
           {/* Live Floor Plan Grid */}
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <BedDouble size={20} className="text-slate-500" /> Physical Room
-              Status
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {data?.liveRooms.map((unit) => (
-                <div
-                  key={unit.id}
-                  className={`relative p-4 rounded-xl border transition-all ${
-                    unit.status === 'AVAILABLE'
-                      ? 'bg-white border-green-200 hover:border-green-400 hover:shadow-md'
-                      : unit.status === 'OCCUPIED'
-                        ? 'bg-blue-50 border-blue-200'
-                        : unit.status === 'DIRTY'
-                          ? 'bg-yellow-50 border-yellow-200'
-                          : 'bg-red-50 border-red-200'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-2xl font-black text-slate-900 tracking-tighter">
-                      {unit.roomNumber}
-                    </span>
-
-                    {/* Status Badge */}
-                    <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${
-                        unit.status === 'AVAILABLE'
-                          ? 'bg-green-100 text-green-700'
-                          : unit.status === 'OCCUPIED'
-                            ? 'bg-blue-100 text-blue-700'
-                            : unit.status === 'DIRTY'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {unit.status}
-                    </span>
-                  </div>
-
-                  <p className="text-xs font-medium text-slate-500 line-clamp-1">
-                    {unit.room.name}
-                  </p>
-
-                  {/* Show Guest Name if Occupied */}
-                  {unit.status === 'OCCUPIED' && unit.bookings?.[0] && (
-                    <div className="mt-3 pt-3 border-t border-blue-100 flex items-center gap-1.5">
-                      <UserCircle size={14} className="text-blue-500" />
-                      <span className="text-xs font-bold text-blue-900 truncate">
-                        {unit.bookings[0].guestName}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
+          {/* LIVE FLOOR PLAN SECTIONS */}
+          <div className="space-y-8">
+            
+            {/* SECTION 1: Completely Free */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                Completely Free (Best for Walk-ins)
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {completelyFreeRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="FREE" />)}
+                {completelyFreeRooms.length === 0 && <p className="text-sm text-slate-500 col-span-full">No completely free rooms available.</p>}
+              </div>
             </div>
+
+            {/* SECTION 2: Future Booked */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-orange-400"></span>
+                Available (But Future Booked)
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {futureBookedRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="FUTURE" />)}
+              </div>
+            </div>
+
+            {/* SECTION 3: Incoming Today */}
+            {incomingTodayRooms.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                  Available (DO NOT SELL - Guest Arriving Today)
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 opacity-75">
+                  {incomingTodayRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="INCOMING_TODAY" />)}
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 4: Occupied */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                Currently Occupied
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {occupiedRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="OCCUPIED" />)}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -269,7 +275,7 @@ export default function FrontDeskDashboard() {
                       onClick={() =>
                         handleAction(
                           booking.id,
-                          'CHECK_IN',
+                          'CHECKED_IN',
                           booking.roomUnit.id
                         )
                       }

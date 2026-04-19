@@ -37,7 +37,7 @@ export async function GET() {
         room: true,
         // Optional: Include the current active booking to show the guest name
         bookings: {
-          where: { status: 'CHECKED_IN' },
+          where: { status: { in: ['CHECKED_IN', 'CONFIRMED']}},
         },
       },
       orderBy: { roomNumber: 'asc' },

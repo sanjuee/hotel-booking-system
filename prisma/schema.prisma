@@ -27,7 +27,6 @@ model Room {
 
 enum RoomStatus {
   AVAILABLE
-  BOOKED
   OCCUPIED
   MAINTENANCE
 }
