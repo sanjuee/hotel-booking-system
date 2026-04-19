@@ -1,34 +1,21 @@
-
-
-// FIX THE Handleststuschange and Remove NO-SHOW from all files
-
 'use client'
 
 import { Booking } from '@/types'
 import { useState, useEffect } from 'react'
-import { Search, Plus, X, Calendar as CalendarIcon } from 'lucide-react'
-
-// Define our complex nested type based on the Prisma include
-
+import { Search, Plus, Calendar as CalendarIcon } from 'lucide-react'
+import NewBookingForm from '@/components/admin/NewBookingForm'
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [availableUnits, setAvailableUnits] = useState<any[]>([])
   
-  // Form State
-  const [formData, setFormData] = useState({
-    guestName: '', email: '', phone: '', checkInDate: '', 
-    checkOutDate: '', totalPrice: '', roomUnitId: ''
-  })
+  // Notice how clean this is now! We deleted all the formData and availableUnits state 
+  // because the NewBookingForm component handles all of that internally now.
 
   useEffect(() => {
     fetchBookings()
-    fetchRoomUnits() // Fetch physical rooms for the manual booking dropdown
   }, [])
 
   const fetchBookings = async () => {
@@ -42,64 +29,35 @@ export default function AdminBookings() {
     }
   }
 
-  const fetchRoomUnits = async () => {
-    try {
-      // Reusing the front-desk API to get all physical units
-      const res = await fetch('/api/front-desk') 
-      if (res.ok) setAvailableUnits(await res.json())
-    } catch (error) {
-      console.error(error)
-    }
-  }
-
-  const handleStatusChange = async (booking: Booking, newStatus: string) => {
+  const handleStatusChange = async (booking: Booking, actionName: string) => {
     try {
       const res = await fetch('/api/admin/front-desk/action', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // FIX 1: Matched the backend variable names
         body: JSON.stringify({ 
           bookingId: booking.id, 
-          action: newStatus, 
+          action: actionName, 
           roomUnitId: booking.roomUnit.id  
         })
       })
 
-      if (res.ok){
-        // We map the action back to the display status (e.g., 'CANCEL' -> 'CANCELLED')
-        const displayStatus = newStatus === 'CANCEL' ? 'CANCELLED' 
-                            : newStatus === 'NO_SHOW' ? 'CANCELLED' 
-                            : newStatus;
-
-        setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: displayStatus as any } : b))
+      if (res.ok) {
+        let newDisplayStatus = 'CONFIRMED';
+        if (actionName === 'CHECK_IN') newDisplayStatus = 'CHECKED_IN';
+        if (actionName === 'CHECK_OUT') newDisplayStatus = 'CHECKED_OUT';
+        if (actionName === 'CANCEL') newDisplayStatus = 'CANCELLED';
+        
+        setBookings(prev => prev.map(b => 
+          b.id === booking.id ? { ...b, status: newDisplayStatus as any } : b
+        ))
       } else {
         const errorData = await res.json()
         alert(errorData.error || "Failed to update status")
-        fetchBookings() // Revert on failure
+        fetchBookings() // Revert UI on failure
       }
     } catch (error) {
       alert("Network error: Failed to update status")
-      fetchBookings() // Revert on failure
-    }
-  }
-
-  const handleCreateBooking = async (e: React.SubmitEvent) => {
-    e.preventDefault()
-    try {
-      const res = await fetch('/api/admin/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      
-      if (!res.ok) throw new Error("Failed to create booking")
-      
-      const newBooking = await res.json()
-      setBookings([newBooking, ...bookings]) // Add to top of list
-      setIsModalOpen(false)
-      setFormData({ guestName: '', email: '', phone: '', checkInDate: '', checkOutDate: '', totalPrice: '', roomUnitId: '' })
-    } catch (error) {
-      alert(error)
+      fetchBookings() // Revert UI on failure
     }
   }
 
@@ -117,7 +75,7 @@ export default function AdminBookings() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Bookings Ledger</h1>
-          <p className="text-slate-500 mt-1">Manage reservations, cancellations, and call-in guests.</p>
+          <p className="text-slate-500 mt-1">Manage reservations, check-ins, and cancellations.</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -181,22 +139,38 @@ export default function AdminBookings() {
                     </td>
                     
                     <td className="px-6 py-4">
-                      <select
-                        value={booking.status}
-                        onChange={(e) => handleStatusChange(booking, e.target.value)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full border outline-none appearance-none cursor-pointer ${
-                          booking.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          booking.status === 'CHECKED_IN' ? 'bg-green-50 text-green-700 border-green-200' :
-                          booking.status === 'CANCELLED' || 'NO_SHOW' ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        <option value="CONFIRMED">CONFIRMED</option>
-                        <option value="CHECKED_IN">CHECKED IN</option>
-                        <option value="CHECKED_OUT">CHECKED OUT</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                        <option value="NO_SHOW">NO-SHOW</option>
-                      </select>
+                      {/* 🚨 THE DYNAMIC STATUS ENGINE 🚨 */}
+                      
+                      {booking.status === 'CONFIRMED' ? (
+                        <select
+                          value="CONFIRMED" // Display current state
+                          onChange={(e) => handleStatusChange(booking, e.target.value)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200 outline-none cursor-pointer"
+                        >
+                          <option value="CONFIRMED" disabled>CONFIRMED</option>
+                          <option value="CHECK_IN">CHECK IN GUEST</option>
+                          <option value="CANCEL">CANCEL BOOKING</option>
+                        </select>
+                      ) : booking.status === 'CHECKED_IN' ? (
+                        <select
+                          value="CHECKED_IN" // Display current state
+                          onChange={(e) => handleStatusChange(booking, e.target.value)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-full border bg-green-50 text-green-700 border-green-200 outline-none cursor-pointer"
+                        >
+                          <option value="CHECKED_IN" disabled>CHECKED IN</option>
+                          <option value="CHECK_OUT">CHECK OUT GUEST</option>
+                        </select>
+                      ) : booking.status === 'CHECKED_OUT' ? (
+                        // Terminal state: Read-only badge
+                        <span className="text-[10px] font-bold px-3 py-1.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200 uppercase tracking-wider cursor-not-allowed">
+                          Checked Out
+                        </span>
+                      ) : (
+                        // Terminal state: Read-only badge (CANCELLED)
+                        <span className="text-[10px] font-bold px-3 py-1.5 rounded-full border bg-red-50 text-red-600 border-red-200 uppercase tracking-wider cursor-not-allowed">
+                          Cancelled
+                        </span>
+                      )}
                     </td>
 
                   </tr>
@@ -209,53 +183,10 @@ export default function AdminBookings() {
 
       {/* CALL-IN BOOKING MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-900">New Call-in Booking</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700"><X size={24} /></button>
-            </div>
-            
-            <form onSubmit={handleCreateBooking} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Guest Name</label>
-                  <input required type="text" value={formData.guestName} onChange={e => setFormData({...formData, guestName: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone</label>
-                  <input required type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Check In</label>
-                  <input required type="date" value={formData.checkInDate} onChange={e => setFormData({...formData, checkInDate: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Check Out</label>
-                  <input required type="date" value={formData.checkOutDate} onChange={e => setFormData({...formData, checkOutDate: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Price (₹)</label>
-                  <input required type="number" step="0.01" value={formData.totalPrice} onChange={e => setFormData({...formData, totalPrice: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Assign Physical Room</label>
-                  <select required value={formData.roomUnitId} onChange={e => setFormData({...formData, roomUnitId: e.target.value})} className="w-full p-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-600 bg-white">
-                    <option value="">Select a unit...</option>
-                    {availableUnits.map(unit => (
-                      <option key={unit.id} value={unit.id}>Unit {unit.roomNumber} ({unit.room?.name})</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="pt-4 flex justify-end gap-3 mt-6 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Confirm Booking</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <NewBookingForm 
+          setIsModalOpen={setIsModalOpen} 
+          onSuccess={fetchBookings} 
+        />
       )}
     </div>
   )

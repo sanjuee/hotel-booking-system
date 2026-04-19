@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const newBooking = await prisma.booking.create({
       data: {
         guestName: data.guestName,
-        email: data.email || 'N/A', // Phone bookings might not have email
+        email: data.email || 'N/A', 
         phone: data.phone,
         checkInDate: new Date(data.checkInDate),
         checkOutDate: new Date(data.checkOutDate),

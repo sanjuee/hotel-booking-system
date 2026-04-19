@@ -7,7 +7,7 @@ export async function PATCH(request: Request) {
     const { bookingId, action, roomUnitId } = await request.json();
 
     // 1. CHECK IN -> Room becomes OCCUPIED
-    if (action === 'CHECKED_IN') {
+    if (action === 'CHECK_IN') {
       await prisma.$transaction([
         prisma.booking.update({ where: { id: bookingId }, data: { status: 'CHECKED_IN' } }),
         prisma.roomUnit.update({ where: { id: roomUnitId }, data: { status: 'OCCUPIED' } })
@@ -16,7 +16,7 @@ export async function PATCH(request: Request) {
     }
 
     // 2. CHECK OUT -> Room becomes DIRTY (or AVAILABLE)
-    if (action === 'CHECKED_OUT') {
+    if (action === 'CHECK_OUT') {
       await prisma.$transaction([
         // End the financial booking
         prisma.booking.update({ 

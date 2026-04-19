@@ -12,11 +12,9 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { DashboardData } from '@/types'
-import FrontDeskRoomCard from '@/components/admin/FrontDeskRoomCard';
-
-
-
+import { DashboardData, FrontDeskRoomUnit } from '@/types'
+import FrontDeskRoomCard from '@/components/admin/FrontDeskRoomCard'
+import NewBookingForm from '@/components/admin/NewBookingForm'
 
 export default function FrontDeskDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -28,6 +26,14 @@ export default function FrontDeskDashboard() {
     new Date().toISOString().split('T')[0]
   )
   const [walkInCheckOut, setWalkInCheckOut] = useState('')
+
+  const [walkInConfig, setWalkInConfig] = useState<{
+    unitId: string
+    roomNumber: string
+    roomType: string
+    price: number
+    maxDate?: string
+  } | null>(null)
 
   useEffect(() => {
     fetchDashboard()
@@ -49,7 +55,7 @@ export default function FrontDeskDashboard() {
   // The Action Handler (The Hands)
   const handleAction = async (
     bookingId: string,
-    action: 'CHECKED_IN' | 'NO_SHOW',
+    action: 'CHECK_IN' | 'NO_SHOW',
     roomUnitId?: string
   ) => {
     if (
@@ -78,35 +84,56 @@ export default function FrontDeskDashboard() {
     }
   }
 
-  // --- THE SORTING ENGINE ---
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const handleRoomClick = (unit: FrontDeskRoomUnit, type: string) => {
+    let maxDate = undefined
 
-  const occupiedRooms = data?.liveRooms.filter(r => r.status === 'OCCUPIED') || [];
-  
-  const allAvailableRooms = data?.liveRooms.filter(r => r.status === 'AVAILABLE') || [];
+    // If it's a FUTURE booked room, calculate the exact max date they must check out
+    if (type === 'FUTURE') {
+      const nextBooking = unit.bookings?.find((b) => b.status === 'CONFIRMED')
+      if (nextBooking) {
+        maxDate = new Date(nextBooking.checkInDate).toISOString().split('T')[0]
+      }
+    }
+    setWalkInConfig({
+      unitId: unit.id,
+      roomNumber: unit.roomNumber,
+      roomType: unit.room.name,
+      price: unit.room.price || 0, // Fallback to 0 if price isn't fetched
+      maxDate: maxDate,
+    })
+  }
+
+  // --- THE SORTING ENGINE ---
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const occupiedRooms =
+    data?.liveRooms.filter((r) => r.status === 'OCCUPIED') || []
+
+  const allAvailableRooms =
+    data?.liveRooms.filter((r) => r.status === 'AVAILABLE') || []
 
   // Group 1: Incoming Today (High Danger)
-  const incomingTodayRooms = allAvailableRooms.filter(room => {
-    const nextBooking = room.bookings?.find(b => b.status === 'CONFIRMED');
-    if (!nextBooking) return false;
-    const checkIn = new Date(nextBooking.checkInDate);
-    return checkIn.getTime() === today.getTime();
-  });
+  const incomingTodayRooms = allAvailableRooms.filter((room) => {
+    const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
+    if (!nextBooking) return false
+    const checkIn = new Date(nextBooking.checkInDate)
+    return checkIn.getTime() === today.getTime()
+  })
 
   // Group 2: Future Booked (Medium Danger)
-  const futureBookedRooms = allAvailableRooms.filter(room => {
-    const nextBooking = room.bookings?.find(b => b.status === 'CONFIRMED');
-    if (!nextBooking) return false;
-    const checkIn = new Date(nextBooking.checkInDate);
-    return checkIn.getTime() > today.getTime();
-  });
+  const futureBookedRooms = allAvailableRooms.filter((room) => {
+    const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
+    if (!nextBooking) return false
+    const checkIn = new Date(nextBooking.checkInDate)
+    return checkIn.getTime() > today.getTime()
+  })
 
   // Group 3: Completely Free (Zero Danger)
-  const completelyFreeRooms = allAvailableRooms.filter(room => {
-    const hasIncoming = room.bookings?.some(b => b.status === 'CONFIRMED');
-    return !hasIncoming;
-  }); 
+  const completelyFreeRooms = allAvailableRooms.filter((room) => {
+    const hasIncoming = room.bookings?.some((b) => b.status === 'CONFIRMED')
+    return !hasIncoming
+  })
 
   if (isLoading) {
     return (
@@ -182,7 +209,6 @@ export default function FrontDeskDashboard() {
           {/* Live Floor Plan Grid */}
           {/* LIVE FLOOR PLAN SECTIONS */}
           <div className="space-y-8">
-            
             {/* SECTION 1: Completely Free */}
             <div>
               <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
@@ -190,8 +216,19 @@ export default function FrontDeskDashboard() {
                 Completely Free (Best for Walk-ins)
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {completelyFreeRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="FREE" />)}
-                {completelyFreeRooms.length === 0 && <p className="text-sm text-slate-500 col-span-full">No completely free rooms available.</p>}
+                {completelyFreeRooms.map((unit) => (
+                  <FrontDeskRoomCard
+                    key={unit.id}
+                    unit={unit}
+                    type="FREE"
+                    onClick={() => handleRoomClick(unit, 'FREE')}
+                  />
+                ))}
+                {completelyFreeRooms.length === 0 && (
+                  <p className="text-sm text-slate-500 col-span-full">
+                    No completely free rooms available.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -202,7 +239,14 @@ export default function FrontDeskDashboard() {
                 Available (But Future Booked)
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {futureBookedRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="FUTURE" />)}
+                {futureBookedRooms.map((unit) => (
+                  <FrontDeskRoomCard
+                    key={unit.id}
+                    unit={unit}
+                    type="FUTURE"
+                    onClick={() => handleRoomClick(unit, 'FUTURE')}
+                  />
+                ))}
               </div>
             </div>
 
@@ -214,7 +258,13 @@ export default function FrontDeskDashboard() {
                   Available (DO NOT SELL - Guest Arriving Today)
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 opacity-75">
-                  {incomingTodayRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="INCOMING_TODAY" />)}
+                  {incomingTodayRooms.map((unit) => (
+                    <FrontDeskRoomCard
+                      key={unit.id}
+                      unit={unit}
+                      type="INCOMING_TODAY"
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -226,10 +276,15 @@ export default function FrontDeskDashboard() {
                 Currently Occupied
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {occupiedRooms.map(unit => <FrontDeskRoomCard key={unit.id} unit={unit} type="OCCUPIED" />)}
+                {occupiedRooms.map((unit) => (
+                  <FrontDeskRoomCard
+                    key={unit.id}
+                    unit={unit}
+                    type="OCCUPIED"
+                  />
+                ))}
               </div>
             </div>
-
           </div>
         </div>
 
@@ -275,7 +330,7 @@ export default function FrontDeskDashboard() {
                       onClick={() =>
                         handleAction(
                           booking.id,
-                          'CHECKED_IN',
+                          'CHECK_IN',
                           booking.roomUnit.id
                         )
                       }
@@ -350,6 +405,25 @@ export default function FrontDeskDashboard() {
           </div>
         </div>
       </div>
+      {walkInConfig && (
+        <NewBookingForm
+          // We convert the boolean setter to just clear the config state
+          setIsModalOpen={(isOpen) => {
+            if (!isOpen) setWalkInConfig(null)
+          }}
+          onSuccess={() => {
+            setWalkInConfig(null)
+            fetchDashboard() // Refresh the grid to show the room as OCCUPIED instantly!
+          }}
+          initialRoomId={walkInConfig.unitId}
+          initialRoomNumber = {walkInConfig.roomNumber}
+          initialRoomType = {walkInConfig.roomType}
+          initialTotalPrice={walkInConfig.price}
+          initialCheckInDate={new Date().toISOString().split('T')[0]} // Forces Today's Date
+          maxCheckOutDate={walkInConfig.maxDate} // Passes the safety lock if needed
+          isRoomReadOnly={true} // Locks the dropdown so they don't change the room
+        />
+      )}
     </div>
   )
 }

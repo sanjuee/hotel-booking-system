@@ -25,11 +25,11 @@ export interface Booking {
   };
 }
 
-export interface RoomUnit {
+export interface FrontDeskRoomUnit {
   id: string;
   roomNumber: string;
   status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'; 
-  room: { name: string };
+  room: { name: string, price: number };
   bookings?: { 
     guestName: string;
     status: 'CONFIRMED' | 'CHECKED_IN'; 
@@ -40,5 +40,5 @@ export interface RoomUnit {
 export interface DashboardData {
   arrivals: Booking[];
   noShows: Booking[];
-  liveRooms: RoomUnit[];
+  liveRooms: FrontDeskRoomUnit[];
 }
