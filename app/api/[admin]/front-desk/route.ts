@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    // 1. Get Midnight Today and Midnight Tomorrow for precise date filtering
+    // Get Midnight Today and Midnight Tomorrow for precise date filtering
     const now = new Date()
     const startOfToday = new Date(
       now.getFullYear(),
@@ -13,7 +13,7 @@ export async function GET() {
     const startOfTomorrow = new Date(startOfToday)
     startOfTomorrow.setDate(startOfTomorrow.getDate() + 1)
 
-    // 2. FETCH ARRIVALS (Bookings starting today that are still CONFIRMED)
+    // FETCH ARRIVALS (Bookings starting today that are still CONFIRMED)
     const arrivals = await prisma.booking.findMany({
       where: {
         checkInDate: { gte: startOfToday, lt: startOfTomorrow },
@@ -22,7 +22,7 @@ export async function GET() {
       include: { roomUnit: { include: { room: true } } },
     })
 
-    // 3. FETCH NO-SHOWS (Bookings from yesterday or older that never checked in)
+    //  FETCH NO-SHOWS (Bookings from yesterday or older that never checked in)
     const noShows = await prisma.booking.findMany({
       where: {
         checkInDate: { lt: startOfToday },
@@ -31,11 +31,19 @@ export async function GET() {
       include: { roomUnit: { include: { room: true } } },
     })
 
-    // 4. FETCH CURRENT LIVE ROOM STATUS (For the Walk-in grid)
+  //  FETCH TODAYS EXPECTED DEPARTURE (Check-Outs)
+    const departures = await prisma.booking.findMany({
+      where: {
+        checkOutDate: { lt: startOfTomorrow},
+        status: 'CHECKED_IN'
+      },
+      include: { roomUnit : { include: { room: true }}}
+    })
+
+    //  FETCH CURRENT LIVE ROOM STATUS (For the Walk-in grid)
     const liveRooms = await prisma.roomUnit.findMany({
       include: {
         room: true,
-        // Optional: Include the current active booking to show the guest name
         bookings: {
           where: { status: { in: ['CHECKED_IN', 'CONFIRMED']}},
         },
@@ -43,7 +51,9 @@ export async function GET() {
       orderBy: { roomNumber: 'asc' },
     })
 
-    return NextResponse.json({ arrivals, noShows, liveRooms }, { status: 200 })
+    
+
+    return NextResponse.json({ arrivals, noShows, departures, liveRooms }, { status: 200 })
   } catch (error) {
     console.error('Front Desk API Error:', error)
     return NextResponse.json(

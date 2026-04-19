@@ -9,6 +9,7 @@ import {
   Calendar,
   ArrowRight,
   UserCircle,
+  LogOut,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -26,13 +27,21 @@ export default function FrontDeskDashboard() {
     new Date().toISOString().split('T')[0]
   )
   const [walkInCheckOut, setWalkInCheckOut] = useState('')
-
   const [walkInConfig, setWalkInConfig] = useState<{
     unitId: string
     roomNumber: string
     roomType: string
     price: number
     maxDate?: string
+  } | null>(null)
+
+  const [checkOutConfig, setCheckOutConfig] = useState<{
+    bookingId: string
+    guestName: string
+    roomNumber: string
+    checkInDate: string
+    checkOutDate: string
+    roomUnitId: string
   } | null>(null)
 
   useEffect(() => {
@@ -55,7 +64,7 @@ export default function FrontDeskDashboard() {
   // The Action Handler (The Hands)
   const handleAction = async (
     bookingId: string,
-    action: 'CHECK_IN' | 'NO_SHOW',
+    action: 'CHECK_IN' | 'CHECK_OUT' | 'NO_SHOW',
     roomUnitId?: string
   ) => {
     if (
@@ -85,22 +94,39 @@ export default function FrontDeskDashboard() {
   }
 
   const handleRoomClick = (unit: FrontDeskRoomUnit, type: string) => {
-    let maxDate = undefined
-
-    // If it's a FUTURE booked room, calculate the exact max date they must check out
-    if (type === 'FUTURE') {
-      const nextBooking = unit.bookings?.find((b) => b.status === 'CONFIRMED')
-      if (nextBooking) {
-        maxDate = new Date(nextBooking.checkInDate).toISOString().split('T')[0]
+    if (type === 'FREE' || type === 'FUTURE') {
+      let maxDate = undefined
+      // If it's a FUTURE booked room, calculate the exact max date they must check out
+      if (type === 'FUTURE') {
+        const nextBooking = unit.bookings?.find((b) => b.status === 'CONFIRMED')
+        if (nextBooking) {
+          maxDate = new Date(nextBooking.checkInDate)
+            .toISOString()
+            .split('T')[0]
+        }
+      }
+      setWalkInConfig({
+        unitId: unit.id,
+        roomNumber: unit.roomNumber,
+        roomType: unit.room.name,
+        price: unit.room.price || 0, // Fallback to 0 if price isn't fetched
+        maxDate: maxDate,
+      })
+    } else if (type === 'OCCUPIED') {
+      const activeBooking = unit.bookings?.find(
+        (b) => b.status === 'CHECKED_IN'
+      )
+      if (activeBooking) {
+        setCheckOutConfig({
+          bookingId: activeBooking.id,
+          guestName: activeBooking.guestName,
+          roomNumber: unit.roomNumber,
+          checkInDate: activeBooking.checkInDate,
+          checkOutDate: activeBooking.checkOutDate,
+          roomUnitId: unit.id,
+        })
       }
     }
-    setWalkInConfig({
-      unitId: unit.id,
-      roomNumber: unit.roomNumber,
-      roomType: unit.room.name,
-      price: unit.room.price || 0, // Fallback to 0 if price isn't fetched
-      maxDate: maxDate,
-    })
   }
 
   // --- THE SORTING ENGINE ---
@@ -281,6 +307,7 @@ export default function FrontDeskDashboard() {
                     key={unit.id}
                     unit={unit}
                     type="OCCUPIED"
+                    onClick={() => handleRoomClick(unit, 'OCCUPIED')}
                   />
                 ))}
               </div>
@@ -344,6 +371,56 @@ export default function FrontDeskDashboard() {
                           <CheckCircle2 size={16} /> Check In Guest
                         </>
                       )}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <LogOut size={18} className="text-orange-600" /> Today's
+                Departures
+              </h3>
+              <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                {data?.departures.length || 0}
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
+              {data?.departures.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-500">
+                  No departures expected today.
+                </div>
+              ) : (
+                data?.departures.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="p-4 hover:bg-orange-50/50 transition-colors"
+                  >
+                    <div className="font-bold text-slate-900">
+                      {booking.guestName}
+                    </div>
+                    <div className="text-xs text-slate-500 font-medium mb-2">
+                      Unit {booking.roomUnit.roomNumber} •{' '}
+                      {booking.roomUnit.room.name}
+                    </div>
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          booking.id,
+                          'CHECK_OUT',
+                          booking.roomUnit.id
+                        )
+                      }
+                      disabled={isProcessing === booking.id}
+                      className="w-full bg-white text-orange-600 hover:bg-orange-50 border border-orange-200 py-1.5 rounded-md text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isProcessing === booking.id
+                        ? 'Processing...'
+                        : 'Check Out Guest'}
                     </button>
                   </div>
                 ))
@@ -416,13 +493,116 @@ export default function FrontDeskDashboard() {
             fetchDashboard() // Refresh the grid to show the room as OCCUPIED instantly!
           }}
           initialRoomId={walkInConfig.unitId}
-          initialRoomNumber = {walkInConfig.roomNumber}
-          initialRoomType = {walkInConfig.roomType}
+          initialRoomNumber={walkInConfig.roomNumber}
+          initialRoomType={walkInConfig.roomType}
           initialTotalPrice={walkInConfig.price}
           initialCheckInDate={new Date().toISOString().split('T')[0]} // Forces Today's Date
           maxCheckOutDate={walkInConfig.maxDate} // Passes the safety lock if needed
           isRoomReadOnly={true} // Locks the dropdown so they don't change the room
         />
+      )}
+
+      {checkOutConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h2 className="text-xl  font-bold text-gray-900">
+                Confirm Check-Out
+              </h2>
+              <button
+                onClick={() => setCheckOutConfig(null)}
+                className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-md hover:bg-gray-100"
+              >
+                <XCircle size={22} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Guest Details "Receipt" Card */}
+              <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 relative">
+                {/* Guest Name Section */}
+                <div className="mb-4 pb-4 border-b border-gray-200 border-dashed">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
+                    Guest Name
+                  </p>
+                  <p className="font-bold text-lg text-gray-900">
+                    {checkOutConfig.guestName}
+                  </p>
+                </div>
+
+                {/* Dates & Room Grid */}
+                <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
+                      Room Unit
+                    </p>
+                    <p className="font-semibold text-gray-900">
+                      {checkOutConfig.roomNumber}
+                    </p>
+                  </div>
+
+                  {/* Empty div to keep the grid balanced if you want Room Unit on its own line, 
+                            or just let Check-In/Out sit below it */}
+                  <div className="hidden sm:block"></div>
+
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
+                      Check-In
+                    </p>
+                    <p className="font-medium text-gray-800">
+                      {new Date(checkOutConfig.checkInDate).toLocaleDateString(
+                        'en-US',
+                        { month: 'short', day: 'numeric', year: 'numeric' }
+                      )}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
+                      Check-Out
+                    </p>
+                    <p className="font-medium text-gray-800">
+                      {new Date(checkOutConfig.checkOutDate).toLocaleDateString(
+                        'en-US',
+                        { month: 'short', day: 'numeric', year: 'numeric' }
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-500 text-center">
+                This will mark the room as available and complete the guest's
+                stay.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setCheckOutConfig(null)}
+                  className="flex-1 py-3 text-gray-600 font-medium bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleAction(
+                      checkOutConfig.bookingId,
+                      'CHECK_OUT',
+                      checkOutConfig.roomUnitId
+                    )
+                    setCheckOutConfig(null)
+                  }}
+                  className="flex-1 py-3 bg-[#ff0000c8] text-white font-medium hover:bg-[#bf0202c8] rounded-lg transition-all shadow-sm"
+                >
+                  Confirm Check-Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
