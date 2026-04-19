@@ -1,38 +1,61 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Search, Loader2 } from 'lucide-react' 
+import {
+  Users,
+  AlertCircle,
+  BedDouble,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  ArrowRight,
+  UserCircle,
+} from 'lucide-react'
+import Link from 'next/link'
 
-interface FrontDeskUnit {
+// --- TypeScript Interfaces ---
+interface RoomUnit {
   id: string
   roomNumber: string
-  status: 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'MAINTENANCE'
-  roomId: string
-  room: {
-    name: string
-    type: string
-  }
+  status: 'AVAILABLE' | 'OCCUPIED' | 'DIRTY' | 'MAINTENANCE'
+  room: { name: string }
+  bookings?: { guestName: string }[]
 }
 
-export default function FrontDesk() {
-  const [units, setUnits] = useState<FrontDeskUnit[]>([])
+interface Booking {
+  id: string
+  guestName: string
+  checkInDate: string
+  checkOutDate: string
+  roomUnit: RoomUnit
+}
+
+interface DashboardData {
+  arrivals: Booking[]
+  noShows: Booking[]
+  liveRooms: RoomUnit[]
+}
+
+export default function FrontDeskDashboard() {
+  const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [filter, setFilter] = useState<
-    'ALL' | 'AVAILABLE' | 'BOOKED' | 'OCCUPIED' | 'MAINTENANCE'
-  >('ALL')
-  const [searchQuery, setSearchQuery] = useState('') // <-- New Search State
+  const [isProcessing, setIsProcessing] = useState<string | null>(null)
+
+  // Walk-in Engine State
+  const [walkInCheckIn, setWalkInCheckIn] = useState(
+    new Date().toISOString().split('T')[0]
+  )
+  const [walkInCheckOut, setWalkInCheckOut] = useState('')
 
   useEffect(() => {
-    fetchRooms()
+    fetchDashboard()
   }, [])
 
-  const fetchRooms = async () => {
+  const fetchDashboard = async () => {
     try {
       const res = await fetch('/api/admin/front-desk')
       if (res.ok) {
-        const data = await res.json()
-        setUnits(data)
+        setData(await res.json())
       }
     } catch (error) {
       console.error(error)
@@ -41,164 +64,285 @@ export default function FrontDesk() {
     }
   }
 
-  const handleStatusChange = async (unitId: string, newStatus: string) => {
-    setUnits((prev) =>
-      prev.map((u) =>
-        u.id === unitId ? { ...u, status: newStatus as any } : u
+  // The Action Handler (The Hands)
+  const handleAction = async (
+    bookingId: string,
+    action: 'CHECK_IN' | 'NO_SHOW',
+    roomUnitId?: string
+  ) => {
+    if (
+      !confirm(
+        `Are you sure you want to ${action.replace('_', ' ')} this guest?`
       )
     )
+      return
 
+    setIsProcessing(bookingId)
     try {
-      const res = await fetch('/api/front-desk', {
+      const res = await fetch('/api/admin/front-desk/action', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unitId, newStatus }),
+        body: JSON.stringify({ bookingId, action, roomUnitId }),
       })
 
-      if (!res.ok) throw new Error('Failed to update database')
+      if (!res.ok) throw new Error('Action failed')
+
+      // Refresh the dashboard to get the latest live statuses
+      await fetchDashboard()
     } catch (error) {
-      alert('Status update failed. Reverting.')
-      fetchRooms() // Re-fetch to fix the UI if the database failed
+      alert('Failed to process action. Please try again.')
+    } finally {
+      setIsProcessing(null)
     }
   }
 
-  const filteredUnits = units.filter((u) => {
-    const matchesFilter = filter === 'ALL' ? true : u.status === filter
-    const matchesSearch = u.roomNumber
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
-
-  if (isLoading)
-
-    return (<div className="min-h-screen flex items-center justify-center -mt-10">
-                <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5 text-blue-700" />
-                <div className="text-lg">Loading Front Desk...</div>
-            </div>)
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-screen bg-slate-50">
+        <div className="text-slate-500 font-medium flex items-center gap-2">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          Loading Live Dashboard...
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-8 md:p-12 min-h-screen bg-white">
+    <div className="p-4 md:p-8 min-h-screen bg-slate-50/50 font-sans">
       <div className="mb-8">
-        <h1 className="text-3xl font-serif font-bold text-gray-900">
-          Front Desk
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+          Live Front Desk
         </h1>
-        <p className="text-gray-500 mt-1">
-          Manage physical room statuses and walk-in availability.
+        <p className="text-slate-500 mt-1">
+          Real-time property overview and daily operations.
         </p>
       </div>
 
-      
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-8">
-        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 w-full xl:w-auto hide-scrollbar">
-          {['ALL', 'AVAILABLE', 'BOOKED', 'OCCUPIED', 'MAINTENANCE'].map(
-            (statusOption) => (
-              <button
-                key={statusOption}
-                onClick={() => setFilter(statusOption as any)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                  filter === statusOption
-                    ? 'bg-blue-700 text-white shadow-md' // Updated to match your boutique theme
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-100'
-                }`}
-              >
-                {statusOption}
-              </button>
-            )
-          )}
-        </div>
-
-        
-        <div className="relative w-full xl:w-72 shrink-0">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search room number..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none 
-                        focus:ring-2 focus:ring-blue-700 focus:border-blue-800 transition-all text-sm shadow-sm"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {filteredUnits.map((unit) => (
-          <div
-            key={unit.id}
-            className={`bg-white border-2 rounded-xl p-5 shadow-sm transition-all ${
-              unit.status === 'AVAILABLE'
-                ? 'border-green-100 hover:border-green-300'
-                : unit.status === 'BOOKED'
-                  ? 'border-gray-200 opacity-90'
-                  : unit.status === 'OCCUPIED'
-                    ? 'border-blue-200 bg-blue-50/20'
-                    : 'border-yellow-200 bg-yellow-50/30'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-3">
-              <h3 className="text-2xl font-bold text-gray-900">
-                {unit.roomNumber}
-              </h3>
-
-              <div
-                className={`h-3 w-3 rounded-full mt-2 shrink-0 ${
-                  unit.status === 'AVAILABLE'
-                    ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
-                    : unit.status === 'BOOKED'
-                      ? 'bg-gray-400'
-                      : unit.status === 'OCCUPIED'
-                        ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'
-                        : 'bg-yellow-400'
-                }`}
-              />
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* ========================================= */}
+        {/* PILLAR 1 & 2: FLOOR PLAN & WALK-IN ENGINE */}
+        {/* ========================================= */}
+        <div className="xl:col-span-8 space-y-6">
+          {/* Walk-in Search Bar */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+            <div className="w-full md:flex-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                Walk-in Check In (Today)
+              </label>
+              <div className="relative">
+                <Calendar
+                  className="absolute left-3 top-2.5 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="date"
+                  value={walkInCheckIn}
+                  onChange={(e) => setWalkInCheckIn(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                />
+              </div>
             </div>
-
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-800 line-clamp-1">
-                {unit.room?.name}
-              </p>
-              <p className="text-xs text-gray-500">{unit.room?.type}</p>
+            <div className="w-full md:flex-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                Check Out
+              </label>
+              <div className="relative">
+                <Calendar
+                  className="absolute left-3 top-2.5 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="date"
+                  value={walkInCheckOut}
+                  onChange={(e) => setWalkInCheckOut(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                />
+              </div>
             </div>
-
-            <select
-              value={unit.status}
-              onChange={(e) => handleStatusChange(unit.id, e.target.value)}
-              className={`w-full text-sm p-2 rounded-lg border outline-none font-medium mt-auto ${
-                unit.status === 'AVAILABLE'
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : unit.status === 'BOOKED'
-                    ? 'bg-gray-100 border-gray-200 text-gray-700'
-                    : unit.status === 'OCCUPIED'
-                      ? 'bg-blue-50 border-blue-200 text-blue-800'
-                      : 'bg-yellow-100 border-yellow-300 text-yellow-800'
-              }`}
+            <Link
+              href="/admin/bookings"
+              className="w-full md:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 h-[42px] shadow-sm text-sm"
             >
-              <option value="AVAILABLE">Available</option>
-              <option value="OCCUPIED">Occupied (Checked In)</option>
-              <option value="BOOKED">Booked</option>
-              <option value="MAINTENANCE">Maintenance</option>
-            </select>
+              Start Walk-in <ArrowRight size={16} />
+            </Link>
           </div>
-        ))}
 
-        {filteredUnits.length === 0 && (
-          <div className="col-span-full py-16 text-center">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Search className="h-6 w-6 text-gray-400" />
+          {/* Live Floor Plan Grid */}
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <BedDouble size={20} className="text-slate-500" /> Physical Room
+              Status
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {data?.liveRooms.map((unit) => (
+                <div
+                  key={unit.id}
+                  className={`relative p-4 rounded-xl border transition-all ${
+                    unit.status === 'AVAILABLE'
+                      ? 'bg-white border-green-200 hover:border-green-400 hover:shadow-md'
+                      : unit.status === 'OCCUPIED'
+                        ? 'bg-blue-50 border-blue-200'
+                        : unit.status === 'DIRTY'
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-red-50 border-red-200'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-2xl font-black text-slate-900 tracking-tighter">
+                      {unit.roomNumber}
+                    </span>
+
+                    {/* Status Badge */}
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${
+                        unit.status === 'AVAILABLE'
+                          ? 'bg-green-100 text-green-700'
+                          : unit.status === 'OCCUPIED'
+                            ? 'bg-blue-100 text-blue-700'
+                            : unit.status === 'DIRTY'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      {unit.status}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-medium text-slate-500 line-clamp-1">
+                    {unit.room.name}
+                  </p>
+
+                  {/* Show Guest Name if Occupied */}
+                  {unit.status === 'OCCUPIED' && unit.bookings?.[0] && (
+                    <div className="mt-3 pt-3 border-t border-blue-100 flex items-center gap-1.5">
+                      <UserCircle size={14} className="text-blue-500" />
+                      <span className="text-xs font-bold text-blue-900 truncate">
+                        {unit.bookings[0].guestName}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">
-              No rooms found
-            </h3>
-            <p className="text-gray-500">
-              {searchQuery
-                ? `No rooms matching "${searchQuery}" in ${filter} status.`
-                : 'No rooms match the current filter.'}
-            </p>
           </div>
-        )}
+        </div>
+
+        {/* ========================================= */}
+        {/* PILLAR 3: OPERATIONS LOG (RIGHT SIDEBAR)  */}
+        {/* ========================================= */}
+        <div className="xl:col-span-4 space-y-6">
+          {/* Arrivals Board */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Users size={18} className="text-blue-600" />
+                Today's Arrivals
+              </h3>
+              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                {data?.arrivals.length || 0}
+              </span>
+            </div>
+
+            <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+              {data?.arrivals.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-500">
+                  No arrivals pending today.
+                </div>
+              ) : (
+                data?.arrivals.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="p-4 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-bold text-slate-900">
+                          {booking.guestName}
+                        </div>
+                        <div className="text-xs text-slate-500 font-medium">
+                          Unit {booking.roomUnit.roomNumber} •{' '}
+                          {booking.roomUnit.room.name}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        handleAction(
+                          booking.id,
+                          'CHECK_IN',
+                          booking.roomUnit.id
+                        )
+                      }
+                      disabled={isProcessing === booking.id}
+                      className="w-full mt-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border border-green-200 py-1.5 rounded-md text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isProcessing === booking.id ? (
+                        'Processing...'
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} /> Check In Guest
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Action Center: No-Shows */}
+          <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
+            <div className="bg-red-50 border-b border-red-100 p-4 flex items-center justify-between">
+              <h3 className="font-bold text-red-900 flex items-center gap-2">
+                <AlertCircle size={18} className="text-red-600" />
+                Pending No-Shows
+              </h3>
+              <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                {data?.noShows.length || 0}
+              </span>
+            </div>
+
+            <div className="divide-y divide-red-50 max-h-[300px] overflow-y-auto">
+              {data?.noShows.length === 0 ? (
+                <div className="p-6 text-center text-sm text-slate-500">
+                  All clear. No pending alerts.
+                </div>
+              ) : (
+                data?.noShows.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="p-4 bg-white hover:bg-red-50/50 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-bold text-slate-900">
+                          {booking.guestName}
+                        </div>
+                        <div className="text-xs text-red-500 font-medium">
+                          Missed Check-in:{' '}
+                          {new Date(booking.checkInDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAction(booking.id, 'NO_SHOW')}
+                      disabled={isProcessing === booking.id}
+                      className="w-full mt-2 bg-white text-red-600 hover:bg-red-50 border border-red-200 py-1.5 rounded-md text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {isProcessing === booking.id ? (
+                        'Processing...'
+                      ) : (
+                        <>
+                          <XCircle size={16} /> Confirm No-Show (Cancel)
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

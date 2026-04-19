@@ -1,3 +1,7 @@
+
+
+// FIX THE Handleststuschange and Remove NO-SHOW from all files
+
 'use client'
 
 import { Booking } from '@/types'
@@ -48,23 +52,38 @@ export default function AdminBookings() {
     }
   }
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    // Optimistic UI update
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus as any } : b))
-    
+  const handleStatusChange = async (booking: Booking, newStatus: string) => {
     try {
-      await fetch('/api/admin/bookings', {
+      const res = await fetch('/api/admin/front-desk/action', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
+        // FIX 1: Matched the backend variable names
+        body: JSON.stringify({ 
+          bookingId: booking.id, 
+          action: newStatus, 
+          roomUnitId: booking.roomUnit.id  
+        })
       })
+
+      if (res.ok){
+        // We map the action back to the display status (e.g., 'CANCEL' -> 'CANCELLED')
+        const displayStatus = newStatus === 'CANCEL' ? 'CANCELLED' 
+                            : newStatus === 'NO_SHOW' ? 'CANCELLED' 
+                            : newStatus;
+
+        setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: displayStatus as any } : b))
+      } else {
+        const errorData = await res.json()
+        alert(errorData.error || "Failed to update status")
+        fetchBookings() // Revert on failure
+      }
     } catch (error) {
-      alert("Failed to update status")
+      alert("Network error: Failed to update status")
       fetchBookings() // Revert on failure
     }
   }
 
-  const handleCreateBooking = async (e: React.FormEvent) => {
+  const handleCreateBooking = async (e: React.SubmitEvent) => {
     e.preventDefault()
     try {
       const res = await fetch('/api/admin/bookings', {
@@ -164,11 +183,11 @@ export default function AdminBookings() {
                     <td className="px-6 py-4">
                       <select
                         value={booking.status}
-                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                        onChange={(e) => handleStatusChange(booking, e.target.value)}
                         className={`text-xs font-bold px-3 py-1.5 rounded-full border outline-none appearance-none cursor-pointer ${
                           booking.status === 'CONFIRMED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                           booking.status === 'CHECKED_IN' ? 'bg-green-50 text-green-700 border-green-200' :
-                          booking.status === 'CANCELLED' ? 'bg-red-50 text-red-700 border-red-200' :
+                          booking.status === 'CANCELLED' || 'NO_SHOW' ? 'bg-red-50 text-red-700 border-red-200' :
                           'bg-slate-100 text-slate-700 border-slate-200'
                         }`}
                       >
@@ -176,6 +195,7 @@ export default function AdminBookings() {
                         <option value="CHECKED_IN">CHECKED IN</option>
                         <option value="CHECKED_OUT">CHECKED OUT</option>
                         <option value="CANCELLED">CANCELLED</option>
+                        <option value="NO_SHOW">NO-SHOW</option>
                       </select>
                     </td>
 
