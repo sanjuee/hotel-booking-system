@@ -1,16 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Info, CheckCircle } from 'lucide-react'
+import { Info, CheckCircle, Users, XCircle } from 'lucide-react'
+import Image from 'next/image'
+import { Room } from '@/types'
 
 export default function BookingPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const roomId = searchParams?.get('roomId') 
+  
+  // Get the initial room ID from the URL if it exists
+  const initialRoomId = searchParams?.get('roomId') || ''
 
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [selectedRoomId, setSelectedRoomId] = useState<string>(initialRoomId)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false) // <-- New success state
+  const [isSoldOut,setIsSoldOut] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false) 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState({
     guestName: '',
@@ -21,9 +28,28 @@ export default function BookingPage() {
     specialReq: ''
   })
 
+  // Find the full room object based on the selected ID
+  const selectedRoom = rooms.find(room => room.id === selectedRoomId)
+
+  useEffect(() => {
+    const fetchRoom = async() => {
+      try {
+        const response = await fetch("/api/rooms")
+        if (!response.ok) throw Error("Error fetching rooms");
+        const data = await response.json() as { rooms : Room[] }
+        setRooms(data.rooms)
+      } catch (error) {
+        console.log(error)
+      } 
+    }
+    fetchRoom()
+  }, [])
+
   // Validation function
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
+
+    if (!selectedRoomId) newErrors.roomId = 'Please select a room for your stay'
 
     if (!formData.guestName.trim()) newErrors.guestName = 'Full name is required'
     
@@ -59,11 +85,6 @@ export default function BookingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault() 
 
-    if (!roomId) {
-      alert("Error: No room selected. Please go back and select a room.")
-      return
-    }
-
     if (!validateForm()) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -72,24 +93,31 @@ export default function BookingPage() {
     setIsSubmitting(true)
 
     try {
-      const payload = {...formData, roomId: roomId }
-      const response = await fetch("/api/bookings",{
+      // Attach the selectedRoomId to the final payload
+      const payload = { ...formData, roomId: selectedRoomId, totalPrice: selectedRoom?.price }
+      
+      const response = await fetch("/api/admin/bookings",{
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload)
       })
-      const data = await response.json()
-      if (!response.ok) throw new Error( data.error ||  "Booking failed");
 
-      // Trigger the success UI instead of the alert
+      if (res.status === 409) {
+        setIsSoldOut(true)
+        setIsSubmitting(false)
+        return; // Stop execution here!
+      }
+
+      if (!response.ok) throw new Error("Booking failed");
+
       setIsSuccess(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
 
     } catch (error) {
       console.error(error)
-      alert(error)
+      alert("Something went wrong.")
     } finally {
       setIsSubmitting(false)
     }
@@ -102,8 +130,37 @@ export default function BookingPage() {
     }
   }
 
+  if (isSoldOut) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="max-w-lg w-full p-8 sm:p-12 bg-white shadow-xl rounded-2xl border border-gray-100 text-center animate-in fade-in zoom-in duration-500">
+          <div className="mx-auto w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-6">
+            <XCircle className="h-10 w-10 text-orange-500" strokeWidth={2} />
+          </div>
+          <h2 className="text-3xl font-serif font-bold text-gray-900 mb-4">Suite Unavailable</h2>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            We apologize, <span className="font-medium text-gray-900">{formData.guestName || 'Guest'}</span>. The <span className="font-medium text-gray-900">{selectedRoom?.name || 'selected suite'}</span> is no longer available for your chosen dates. 
+          </p>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => setIsSoldOut(false)}
+              className="w-full bg-[#7A633F] text-white py-3.5 rounded-lg font-medium tracking-wide hover:bg-[#685333] transition-all shadow-md hover:shadow-lg"
+            >
+              Modify Dates or Suite
+            </button>
+            <button 
+              onClick={() => router.push("/")}
+              className="w-full bg-white text-gray-600 border border-gray-200 py-3.5 rounded-lg font-medium tracking-wide hover:bg-gray-50 transition-all"
+            >
+              Return to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // --- SUCCESS VIEW ---
-  // If the booking succeeds, render this card instead of the form.
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-[#FDFBF7] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
@@ -113,7 +170,7 @@ export default function BookingPage() {
           </div>
           <h2 className="text-3xl font-serif font-bold text-gray-900 mb-4">Booking Confirmed!</h2>
           <p className="text-gray-600 mb-8 leading-relaxed">
-            Thank you, <span className="font-medium text-gray-900">{formData.guestName}</span>. Your reservation has been successfully placed. We've sent the complete booking details and arrival instructions to <strong className="text-gray-900">{formData.email}</strong>.
+            Thank you, <span className="font-medium text-gray-900">{formData.guestName}</span>. Your reservation for the <span className="font-medium text-gray-900">{selectedRoom?.name}</span> has been successfully placed. We've sent the complete booking details to <strong className="text-gray-900">{formData.email}</strong>.
           </p>
           <button 
             onClick={() => router.push("/")}
@@ -137,6 +194,59 @@ export default function BookingPage() {
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-6" noValidate> 
+
+          {/* NEW: Room Selection & Preview */}
+          <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Select Your Suite *</label>
+            <select
+              value={selectedRoomId}
+              onChange={(e) => {
+                setSelectedRoomId(e.target.value)
+                if (errors.roomId) setErrors({ ...errors, roomId: '' })
+              }}
+              className={`w-full p-3 rounded-lg border outline-none transition-all bg-white mb-4
+                ${errors.roomId 
+                  ? 'border-red-500 focus:ring-2 focus:ring-red-200' 
+                  : 'border-gray-300 focus:ring-2 focus:ring-[#8B6E4E] focus:border-[#8B6E4E]'}`}
+            >
+              <option value="" disabled>-- Choose a Room --</option>
+              {rooms.map(room => (
+                <option key={room.id} value={room.id}>
+                  {room.name} - ₹{Number(room.price).toLocaleString()}/night
+                </option>
+              ))}
+            </select>
+            {errors.roomId && <p className="text-red-500 text-xs mt-1.5 mb-3 font-medium">{errors.roomId}</p>}
+
+            {/* Selected Room Preview Card */}
+            {selectedRoom && (
+              <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-lg border border-gray-100 shadow-sm animate-in fade-in duration-300">
+                <div className="relative w-full sm:w-1/3 h-32 sm:h-auto rounded-md overflow-hidden shrink-0">
+                  <Image 
+                    src={selectedRoom.image || 'https://via.placeholder.com/300x200?text=No+Image'} 
+                    alt={selectedRoom.name}
+                    fill
+                    className="object-cover"
+                    unoptimized={true}
+                  />
+                </div>
+                <div className="flex flex-col justify-center">
+                  <h3 className="font-serif font-bold text-gray-900 text-lg">{selectedRoom.name}</h3>
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2">{selectedRoom.type}</p>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-3">{selectedRoom.description}</p>
+                  
+                  <div className="flex items-center gap-4 mt-auto">
+                    <span className="font-bold text-[#8B6E4E]">₹{Number(selectedRoom.price).toLocaleString()} <span className="text-xs text-gray-500 font-normal">/night</span></span>
+                    {selectedRoom.capacity && (
+                      <span className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                        <Users size={14} /> {selectedRoom.capacity} Guests
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
           {/* Row 1: Full Name */}
           <div>

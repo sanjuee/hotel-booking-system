@@ -135,7 +135,7 @@ export default function AdminBookings() {
                     </td>
                     
                     <td className="px-6 py-4 font-medium text-slate-900">
-                      ₹{booking.totalPrice.toFixed(2)}
+                      ₹{booking.totalPrice?.toFixed(2)}
                     </td>
                     
                     <td className="px-6 py-4">

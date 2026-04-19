@@ -2,6 +2,27 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 
+export async function GET(){
+  try{
+    const rooms = await prisma.room.findMany({
+      orderBy: {
+        price: 'desc'
+      }
+    })
+
+    return NextResponse.json(
+        {rooms: rooms},
+        {status: 200})
+  }
+  catch(error){
+      console.error("Failed to fetch room:", error);
+      return NextResponse.json(
+        { error: 'Failed to retrive rooms' },
+        { status: 500 }
+      )
+  }
+}
+
 export async function POST(request: Request) {
   try {
 
@@ -31,23 +52,3 @@ export async function POST(request: Request) {
 }
 
 
-export async function GET(){
-  try{
-    const rooms = await prisma.room.findMany({
-      orderBy: {
-        price: 'desc'
-      }
-    })
-
-    return NextResponse.json(
-        {rooms: rooms},
-        {status: 200})
-  }
-  catch(error){
-      console.error("Failed to fetch room:", error);
-      return NextResponse.json(
-        { error: 'Failed to retrive rooms' },
-        { status: 500 }
-      )
-  }
-}
