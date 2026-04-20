@@ -10,6 +10,8 @@ import {
   ArrowRight,
   UserCircle,
   LogOut,
+  Filter,
+  Info,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -21,18 +23,21 @@ export default function FrontDeskDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL')
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
 
-  // Walk-in Engine State
   const [walkInCheckIn, setWalkInCheckIn] = useState(
     new Date().toISOString().split('T')[0]
   )
   const [walkInCheckOut, setWalkInCheckOut] = useState('')
+
   const [walkInConfig, setWalkInConfig] = useState<{
     unitId: string
     roomNumber: string
     roomType: string
     price: number
     maxDate?: string
+    checkOutDate?: string // Added so we can pass it to the modal
   } | null>(null)
 
   const [checkOutConfig, setCheckOutConfig] = useState<{
@@ -61,7 +66,6 @@ export default function FrontDeskDashboard() {
     }
   }
 
-  // The Action Handler (The Hands)
   const handleAction = async (
     bookingId: string,
     action: 'CHECK_IN' | 'CHECK_OUT' | 'NO_SHOW',
@@ -83,8 +87,6 @@ export default function FrontDeskDashboard() {
       })
 
       if (!res.ok) throw new Error('Action failed')
-
-      // Refresh the dashboard to get the latest live statuses
       await fetchDashboard()
     } catch (error) {
       alert('Failed to process action. Please try again.')
@@ -96,7 +98,6 @@ export default function FrontDeskDashboard() {
   const handleRoomClick = (unit: FrontDeskRoomUnit, type: string) => {
     if (type === 'FREE' || type === 'FUTURE') {
       let maxDate = undefined
-      // If it's a FUTURE booked room, calculate the exact max date they must check out
       if (type === 'FUTURE') {
         const nextBooking = unit.bookings?.find((b) => b.status === 'CONFIRMED')
         if (nextBooking) {
@@ -109,8 +110,9 @@ export default function FrontDeskDashboard() {
         unitId: unit.id,
         roomNumber: unit.roomNumber,
         roomType: unit.room.name,
-        price: unit.room.price || 0, // Fallback to 0 if price isn't fetched
+        price: unit.room.price || 0,
         maxDate: maxDate,
+        checkOutDate: walkInCheckOut, // 👈 Passes the searched date down to the modal!
       })
     } else if (type === 'OCCUPIED') {
       const activeBooking = unit.bookings?.find(
@@ -129,17 +131,51 @@ export default function FrontDeskDashboard() {
     }
   }
 
-  // --- THE SORTING ENGINE ---
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const occupiedRooms =
-    data?.liveRooms.filter((r) => r.status === 'OCCUPIED') || []
+  const uniqueTypes = Array.from(
+    new Set(data?.liveRooms.map((r) => r.room?.name).filter(Boolean))
+  )
 
-  const allAvailableRooms =
-    data?.liveRooms.filter((r) => r.status === 'AVAILABLE') || []
+  let filteredRooms = data?.liveRooms || []
 
-  // Group 1: Incoming Today (High Danger)
+  if (selectedCategory !== 'ALL') {
+    filteredRooms = filteredRooms.filter(
+      (r) => r.room?.name === selectedCategory
+    )
+  }
+  if (selectedStatus !== 'ALL') {
+    filteredRooms = filteredRooms.filter((r) => r.status === selectedStatus)
+  }
+
+  if (walkInCheckIn && walkInCheckOut) {
+    const searchStart = new Date(walkInCheckIn).getTime()
+    const searchEnd = new Date(walkInCheckOut).getTime()
+
+    if (searchEnd > searchStart) {
+      filteredRooms = filteredRooms.filter((room) => {
+        const hasClash = room.bookings?.some((b) => {
+          if (b.status === 'CANCELLED' || b.status === 'CHECKED_OUT')
+            return false
+
+          const bStart = new Date(b.checkInDate).getTime()
+          const bEnd = new Date(b.checkOutDate).getTime()
+
+          // The Standard Overlap Formula!
+          return searchStart < bEnd && searchEnd > bStart
+        })
+
+        return !hasClash
+      })
+    }
+  }
+
+  const occupiedRooms = filteredRooms.filter((r) => r.status === 'OCCUPIED')
+  const allAvailableRooms = filteredRooms.filter(
+    (r) => r.status === 'AVAILABLE'
+  )
+
   const incomingTodayRooms = allAvailableRooms.filter((room) => {
     const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
     if (!nextBooking) return false
@@ -147,7 +183,6 @@ export default function FrontDeskDashboard() {
     return checkIn.getTime() === today.getTime()
   })
 
-  // Group 2: Future Booked (Medium Danger)
   const futureBookedRooms = allAvailableRooms.filter((room) => {
     const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
     if (!nextBooking) return false
@@ -155,7 +190,6 @@ export default function FrontDeskDashboard() {
     return checkIn.getTime() > today.getTime()
   })
 
-  // Group 3: Completely Free (Zero Danger)
   const completelyFreeRooms = allAvailableRooms.filter((room) => {
     const hasIncoming = room.bookings?.some((b) => b.status === 'CONFIRMED')
     return !hasIncoming
@@ -166,7 +200,7 @@ export default function FrontDeskDashboard() {
       <div className="flex items-center justify-center h-full min-h-screen bg-slate-50">
         <div className="text-slate-500 font-medium flex items-center gap-2">
           <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          Loading Live Dashboard...
+          Loading Front Desk...
         </div>
       </div>
     )
@@ -176,7 +210,7 @@ export default function FrontDeskDashboard() {
     <div className="p-4 md:p-8 min-h-screen bg-slate-50/50 font-sans">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-          Live Front Desk
+          Front Desk
         </h1>
         <p className="text-slate-500 mt-1">
           Real-time property overview and daily operations.
@@ -184,23 +218,19 @@ export default function FrontDeskDashboard() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* ========================================= */}
-        {/* PILLAR 1 & 2: FLOOR PLAN & WALK-IN ENGINE */}
-        {/* ========================================= */}
         <div className="xl:col-span-8 space-y-6">
+          {/* Walk-in Search Bar */}
           {/* Walk-in Search Bar */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
             <div className="w-full md:flex-1">
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                Walk-in Check In (Today)
+                Walk-in Check In
               </label>
               <div className="relative">
-                <Calendar
-                  className="absolute left-3 top-2.5 text-slate-400"
-                  size={18}
-                />
+                <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18} />
                 <input
                   type="date"
+                  min={walkInCheckIn}
                   value={walkInCheckIn}
                   onChange={(e) => setWalkInCheckIn(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm"
@@ -212,69 +242,188 @@ export default function FrontDeskDashboard() {
                 Check Out
               </label>
               <div className="relative">
-                <Calendar
-                  className="absolute left-3 top-2.5 text-slate-400"
-                  size={18}
-                />
+                <Calendar className="absolute left-3 top-2.5 text-slate-400" size={18} />
                 <input
                   type="date"
+                  min={walkInCheckIn}
                   value={walkInCheckOut}
                   onChange={(e) => setWalkInCheckOut(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm"
                 />
               </div>
             </div>
-            <Link
-              href="/admin/bookings"
-              className="w-full md:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 h-[42px] shadow-sm text-sm"
-            >
-              Start Walk-in <ArrowRight size={16} />
-            </Link>
+            
+            {/* Status Indicator & Undo Button Wrapper */}
+            <div className="flex w-full md:w-auto gap-2">
+              <div className={`flex-1 md:w-auto px-6 py-2 rounded-lg font-bold border flex items-center justify-center gap-2 h-[42px] shadow-sm text-sm transition-colors ${
+                walkInCheckOut && walkInCheckOut > walkInCheckIn 
+                  ? 'bg-green-50 text-green-700 border-green-200' 
+                  : 'bg-slate-50 text-slate-400 border-slate-200'
+              }`}>
+                <CheckCircle2 size={16} /> 
+                {walkInCheckOut && walkInCheckOut > walkInCheckIn ? 'Floor Plan Filtered!' : 'Enter Dates to Filter'}
+              </div>
+
+              {/* 🚨 THE NEW UNDO BUTTON */}
+              {walkInCheckOut && (
+                <button
+                  onClick={() => {
+                    setWalkInCheckIn(new Date().toISOString().split('T')[0]); // Reset to Today
+                    setWalkInCheckOut(''); // Clear Check-Out
+                  }}
+                  title="Clear Dates"
+                  className="px-3 py-2 bg-white border border-slate-200  rounded-lg  text-red-600 hover:border-red-200 transition-colors h-[42px] flex items-center justify-center animate-in fade-in zoom-in duration-200"
+                >
+                  <XCircle size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+          {/* 🚨 THE ACTIVE FILTER BANNER 🚨 */}
+          {walkInCheckOut && walkInCheckOut > walkInCheckIn && (
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3 animate-in slide-in-from-top-2 fade-in duration-300 shadow-sm">
+              <Info className="text-blue-500 mt-0.5 shrink-0" size={18} />
+              <div>
+                <h4 className="text-sm font-bold text-blue-900">
+                  Showing future availability
+                </h4>
+                <p className="text-xs text-blue-700 mt-1 font-medium leading-relaxed">
+                  The floor plan below is currently filtered to only show rooms that are completely available from <b>{new Date(walkInCheckIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> to <b>{new Date(walkInCheckOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b>. 
+                  Click the <b><XCircle className="inline mb-0.5 mx-0.5" size={14} /></b> button above to clear these dates and return to today's standard walk-in dashboard.
+                </p>
+              </div>
+            </div>
+          )}
+          
+
+          {/* --- FILTER BAR --- */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-500 shrink-0">
+              <Filter size={18} />
+              <span className="font-bold text-sm">Filters:</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row w-full gap-4">
+              <div className="w-full sm:flex-1 relative">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm text-slate-700 font-medium appearance-none cursor-pointer"
+                >
+                  <option value="ALL">All Room Types</option>
+                  {uniqueTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <svg
+                    className="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+
+              <div className="w-full sm:flex-1 relative">
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-600 text-sm text-slate-700 font-medium appearance-none cursor-pointer"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="AVAILABLE">Available</option>
+                  <option value="OCCUPIED">Occupied</option>
+                  <option value="MAINTENANCE">Maintenance</option>
+                </select>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <svg
+                    className="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Live Floor Plan Grid */}
           {/* LIVE FLOOR PLAN SECTIONS */}
           <div className="space-y-8">
-            {/* SECTION 1: Completely Free */}
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                Completely Free (Best for Walk-ins)
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {completelyFreeRooms.map((unit) => (
-                  <FrontDeskRoomCard
-                    key={unit.id}
-                    unit={unit}
-                    type="FREE"
-                    onClick={() => handleRoomClick(unit, 'FREE')}
-                  />
-                ))}
-                {completelyFreeRooms.length === 0 && (
-                  <p className="text-sm text-slate-500 col-span-full">
-                    No completely free rooms available.
-                  </p>
-                )}
+            {/* Empty State */}
+            {filteredRooms.length === 0 && (
+              <div className="text-center py-16 bg-white rounded-xl border border-slate-200 shadow-sm">
+                <p className="text-slate-500 font-medium mb-3 text-lg">
+                  No rooms match your selected dates or filters.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedCategory('ALL')
+                    setSelectedStatus('ALL')
+                    setWalkInCheckOut('')
+                  }}
+                  className="bg-blue-50 text-blue-700 px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-100 transition-colors"
+                >
+                  Clear All Filters
+                </button>
               </div>
-            </div>
+            )}
+
+            {/* SECTION 1: Completely Free */}
+            {completelyFreeRooms.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                  Completely Free (Best for Walk-ins)
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {completelyFreeRooms.map((unit) => (
+                    <FrontDeskRoomCard
+                      key={unit.id}
+                      unit={unit}
+                      type="FREE"
+                      onClick={() => handleRoomClick(unit, 'FREE')}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* SECTION 2: Future Booked */}
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-orange-400"></span>
-                Available (But Future Booked)
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {futureBookedRooms.map((unit) => (
-                  <FrontDeskRoomCard
-                    key={unit.id}
-                    unit={unit}
-                    type="FUTURE"
-                    onClick={() => handleRoomClick(unit, 'FUTURE')}
-                  />
-                ))}
+            {futureBookedRooms.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-orange-400"></span>
+                  Available (But Future Booked)
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {futureBookedRooms.map((unit) => (
+                    <FrontDeskRoomCard
+                      key={unit.id}
+                      unit={unit}
+                      type="FUTURE"
+                      onClick={() => handleRoomClick(unit, 'FUTURE')}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* SECTION 3: Incoming Today */}
             {incomingTodayRooms.length > 0 && (
@@ -296,35 +445,34 @@ export default function FrontDeskDashboard() {
             )}
 
             {/* SECTION 4: Occupied */}
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-blue-500"></span>
-                Currently Occupied
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {occupiedRooms.map((unit) => (
-                  <FrontDeskRoomCard
-                    key={unit.id}
-                    unit={unit}
-                    type="OCCUPIED"
-                    onClick={() => handleRoomClick(unit, 'OCCUPIED')}
-                  />
-                ))}
+            {occupiedRooms.length > 0 && (
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-500"></span>
+                  Currently Occupied
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {occupiedRooms.map((unit) => (
+                    <FrontDeskRoomCard
+                      key={unit.id}
+                      unit={unit}
+                      type="OCCUPIED"
+                      onClick={() => handleRoomClick(unit, 'OCCUPIED')}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* ========================================= */}
-        {/* PILLAR 3: OPERATIONS LOG (RIGHT SIDEBAR)  */}
-        {/* ========================================= */}
+        {/* OPERATIONS LOG (RIGHT SIDEBAR) */}
         <div className="xl:col-span-4 space-y-6">
           {/* Arrivals Board */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <Users size={18} className="text-blue-600" />
-                Today's Arrivals
+                <Users size={18} className="text-blue-600" /> Today's Arrivals
               </h3>
               <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
                 {data?.arrivals.length || 0}
@@ -432,8 +580,8 @@ export default function FrontDeskDashboard() {
           <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
             <div className="bg-red-50 border-b border-red-100 p-4 flex items-center justify-between">
               <h3 className="font-bold text-red-900 flex items-center gap-2">
-                <AlertCircle size={18} className="text-red-600" />
-                Pending No-Shows
+                <AlertCircle size={18} className="text-red-600" /> Pending
+                No-Shows
               </h3>
               <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
                 {data?.noShows.length || 0}
@@ -482,32 +630,34 @@ export default function FrontDeskDashboard() {
           </div>
         </div>
       </div>
+
+      {/* MODALS */}
       {walkInConfig && (
         <NewBookingForm
-          // We convert the boolean setter to just clear the config state
           setIsModalOpen={(isOpen) => {
             if (!isOpen) setWalkInConfig(null)
           }}
           onSuccess={() => {
             setWalkInConfig(null)
-            fetchDashboard() // Refresh the grid to show the room as OCCUPIED instantly!
+            fetchDashboard()
           }}
           initialRoomId={walkInConfig.unitId}
           initialRoomNumber={walkInConfig.roomNumber}
           initialRoomType={walkInConfig.roomType}
           initialTotalPrice={walkInConfig.price}
-          initialCheckInDate={new Date().toISOString().split('T')[0]} // Forces Today's Date
-          maxCheckOutDate={walkInConfig.maxDate} // Passes the safety lock if needed
-          isRoomReadOnly={true} // Locks the dropdown so they don't change the room
+          initialCheckInDate={walkInCheckIn}
+          // 🚨 Optionally pass the CheckOutDate if your BookingForm supports it!
+          // initialCheckOutDate={walkInConfig.checkOutDate}
+          maxCheckOutDate={walkInConfig.maxDate}
+          isRoomReadOnly={true}
         />
       )}
 
       {checkOutConfig && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            {/* Header */}
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h2 className="text-xl  font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900">
                 Confirm Check-Out
               </h2>
               <button
@@ -518,11 +668,8 @@ export default function FrontDeskDashboard() {
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-6 space-y-6">
-              {/* Guest Details "Receipt" Card */}
               <div className="bg-gray-50 p-5 rounded-xl border border-gray-100 relative">
-                {/* Guest Name Section */}
                 <div className="mb-4 pb-4 border-b border-gray-200 border-dashed">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
                     Guest Name
@@ -532,7 +679,6 @@ export default function FrontDeskDashboard() {
                   </p>
                 </div>
 
-                {/* Dates & Room Grid */}
                 <div className="grid grid-cols-2 gap-y-5 gap-x-4">
                   <div>
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">
@@ -542,9 +688,6 @@ export default function FrontDeskDashboard() {
                       {checkOutConfig.roomNumber}
                     </p>
                   </div>
-
-                  {/* Empty div to keep the grid balanced if you want Room Unit on its own line, 
-                            or just let Check-In/Out sit below it */}
                   <div className="hidden sm:block"></div>
 
                   <div>
@@ -578,7 +721,6 @@ export default function FrontDeskDashboard() {
                 stay.
               </p>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setCheckOutConfig(null)}

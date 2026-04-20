@@ -25,13 +25,42 @@ export async function GET() {
 //  UPDATE BOOKING STATUS (e.g., Cancel a booking)
 export async function PATCH(request: Request) {
   try {
-    const { id, status } = await request.json()
-    const updatedBooking = await prisma.booking.update({
-      where: { id },
-      data: { status },
-    })
-    return NextResponse.json(updatedBooking, { status: 200 })
+    const { bookingId, action, roomUnitId } = await request.json()
+
+    let newStatus: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' = 'CONFIRMED'
+    if (action === 'CHECK_IN') newStatus = 'CHECKED_IN'
+    if (action === 'CHECK_OUT') newStatus = 'CHECKED_OUT'
+    if (action === 'CANCEL') newStatus = 'CANCELLED'
+
+    let result;
+
+    // 🚨 Run specific transactions based on the action so TypeScript knows exactly what to expect
+    if (action === 'CHECK_IN' && roomUnitId) {
+      result = await prisma.$transaction([
+        prisma.booking.update({ where: { id: bookingId }, data: { status: newStatus } }),
+        prisma.roomUnit.update({ where: { id: roomUnitId }, data: { status: 'OCCUPIED' } })
+      ]);
+    } 
+    else if (action === 'CHECK_OUT' && roomUnitId) {
+      result = await prisma.$transaction([
+        prisma.booking.update({ where: { id: bookingId }, data: { status: newStatus } }),
+        prisma.roomUnit.update({ where: { id: roomUnitId }, data: { status: 'AVAILABLE' } })
+      ]);
+    } 
+    else {
+      // For CANCEL or just updating a booking without touching the physical room
+      const singleUpdate = await prisma.booking.update({ 
+        where: { id: bookingId }, 
+        data: { status: newStatus } 
+      });
+      result = [singleUpdate]; // Wrap in array to match the return format below
+    }
+
+    // Return the updated booking (which is the first item in the result array)
+    return NextResponse.json(result[0], { status: 200 })
+
   } catch (error) {
+    console.error("Status Update Error:", error)
     return NextResponse.json(
       { error: 'Failed to update status' },
       { status: 500 }

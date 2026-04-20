@@ -31,7 +31,7 @@ export interface FrontDeskRoomUnit {
   bookings?: {
     id: string;
     guestName: string;
-    status: 'CONFIRMED' | 'CHECKED_IN'; 
+    status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED'; 
     checkInDate: string;                 
     checkOutDate: string;                 
   }[];
