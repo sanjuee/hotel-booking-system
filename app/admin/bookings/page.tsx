@@ -8,7 +8,9 @@ import {
   Calendar as CalendarIcon,
   Loader2,
   ArrowUpDown,
-} from 'lucide-react' // <-- Added ArrowUpDown
+  MessageSquare,
+  X // <-- Added for the new modal close button
+} from 'lucide-react' 
 import BookingForm from '@/components/admin/BookingForm'
 
 export type SortOption =
@@ -17,6 +19,7 @@ export type SortOption =
   | 'PRICE_DESC'
   | 'PRICE_ASC'
   | 'NAME_ASC'
+  | 'CREATED_DESC' // 🚨 NEW: Sort by most recently created booking
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -26,9 +29,17 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED'
   >('ALL')
-  // <-- NEW: Sort State (Defaulting to upcoming check-ins first)
-  const [sortBy, setSortBy] = useState<SortOption>('DATE_ASC')
+  
+  // Default to showing the most recently made bookings!
+  const [sortBy, setSortBy] = useState<SortOption>('CREATED_DESC') 
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  // 🚨 NEW: State to hold the full request for the modal
+  const [viewingRequest, setViewingRequest] = useState<{
+    guestName: string;
+    request: string;
+  } | null>(null)
 
   useEffect(() => {
     fetchBookings()
@@ -83,7 +94,6 @@ export default function AdminBookings() {
     }
   }
 
-  // <-- UPDATED: Filter AND Sort Engine
   const processedBookings = bookings
     .filter((b) => {
       const matchesSearch =
@@ -94,24 +104,22 @@ export default function AdminBookings() {
       return matchesSearch && matchesStatus
     })
     .sort((a, b) => {
-      // Sorting Logic
       switch (sortBy) {
-        case 'DATE_ASC': // Upcoming first
-          return (
-            new Date(a.checkInDate).getTime() -
-            new Date(b.checkInDate).getTime()
-          )
-        case 'DATE_DESC': // Furthest first
-          return (
-            new Date(b.checkInDate).getTime() -
-            new Date(a.checkInDate).getTime()
-          )
-        case 'PRICE_DESC': // Highest price first
+        case 'DATE_ASC': 
+          return new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime()
+        case 'DATE_DESC': 
+          return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime()
+        case 'PRICE_DESC': 
           return (b.totalPrice || 0) - (a.totalPrice || 0)
-        case 'PRICE_ASC': // Lowest price first
+        case 'PRICE_ASC': 
           return (a.totalPrice || 0) - (b.totalPrice || 0)
-        case 'NAME_ASC': // Alphabetical A-Z
+        case 'NAME_ASC': 
           return a.guestName.localeCompare(b.guestName)
+        case 'CREATED_DESC': // 🚨 NEW: Sorts by when the booking was actually made
+          // Fallback to checkInDate if your DB doesn't have createdAt yet
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.checkInDate).getTime();
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.checkInDate).getTime();
+          return dateB - dateA; 
         default:
           return 0
       }
@@ -138,9 +146,8 @@ export default function AdminBookings() {
         </button>
       </div>
 
-      {/* CONTROLS: Filters, Sort, & Search */}
+      {/* CONTROLS */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
-        {/* STATUS FILTERS */}
         <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 w-full xl:w-auto hide-scrollbar">
           {['ALL', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED'].map(
             (status) => (
@@ -159,49 +166,30 @@ export default function AdminBookings() {
           )}
         </div>
 
-        {/* RIGHT CONTROLS: Sort & Search */}
         <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto shrink-0">
-          {/* SORT DROPDOWN */}
-          <div className="relative w-full sm:w-48 shrink-0">
-            <ArrowUpDown
-              className="absolute left-3 top-3 text-slate-400"
-              size={18}
-            />
+          <div className="relative w-full sm:w-56 shrink-0">
+            <ArrowUpDown className="absolute left-3 top-3 text-slate-400" size={18} />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition-all text-slate-700 text-sm appearance-none cursor-pointer"
             >
-              <option value="DATE_ASC">Upcoming First</option>
-              <option value="DATE_DESC">Furthest First</option>
+              <option value="CREATED_DESC">Recently Booked</option>
+              <option value="DATE_ASC">Upcoming Check-ins</option>
+              <option value="DATE_DESC">Furthest Check-ins</option>
               <option value="PRICE_DESC">Highest Price</option>
               <option value="PRICE_ASC">Lowest Price</option>
               <option value="NAME_ASC">Name (A-Z)</option>
             </select>
-            {/* Custom dropdown arrow to bypass ugly browser defaults */}
             <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-              <svg
-                className="w-4 h-4 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                ></path>
+              <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
               </svg>
             </div>
           </div>
 
-          {/* SEARCH BAR */}
           <div className="relative w-full sm:w-72 shrink-0">
-            <Search
-              className="absolute left-3 top-3 text-slate-400"
-              size={18}
-            />
+            <Search className="absolute left-3 top-3 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Search guest or room..."
@@ -222,6 +210,7 @@ export default function AdminBookings() {
                 <th className="px-6 py-4 whitespace-nowrap">Guest</th>
                 <th className="px-6 py-4 whitespace-nowrap">Dates</th>
                 <th className="px-6 py-4 whitespace-nowrap">Room</th>
+                <th className="px-6 py-4 whitespace-nowrap">Requests</th>
                 <th className="px-6 py-4 whitespace-nowrap">Total</th>
                 <th className="px-6 py-4 whitespace-nowrap">Status</th>
               </tr>
@@ -229,7 +218,7 @@ export default function AdminBookings() {
             <tbody className="divide-y divide-slate-100">
               {processedBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <p className="text-slate-500 font-medium">
                       No bookings found.
                     </p>
@@ -271,6 +260,31 @@ export default function AdminBookings() {
                       <div className="text-xs text-slate-500 line-clamp-1 min-w-[120px]">
                         {booking.roomUnit.room.name}
                       </div>
+                    </td>
+
+                    {/* 🚨 THE UPGRADED REQUESTS DATA CELL */}
+                    <td className="px-6 py-4">
+                      {booking.specialReq ? (
+                        <div className="flex flex-col items-start max-w-[220px]">
+                          <div className="flex items-start gap-1.5">
+                            <MessageSquare size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                            <span className="text-xs text-slate-700 font-medium leading-relaxed line-clamp-2">
+                              {booking.specialReq}
+                            </span>
+                          </div>
+                          {/* If the request is long, show the Read Full button */}
+                          {booking.specialReq.length > 50 && (
+                            <button 
+                              onClick={() => setViewingRequest({ guestName: booking.guestName, request: booking.specialReq! })}
+                              className="text-[10px] uppercase tracking-wider font-bold text-blue-600 hover:text-blue-800 mt-1.5 ml-5 transition-colors"
+                            >
+                              Read Full Request
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">None</span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 font-medium text-slate-900 whitespace-nowrap">
@@ -327,6 +341,39 @@ export default function AdminBookings() {
           </table>
         </div>
       </div>
+
+      {/* 🚨 NEW: THE SPECIAL REQUEST MODAL */}
+      {viewingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <MessageSquare size={18} className="text-amber-500" />
+                Special Request from {viewingRequest.guestName}
+              </h3>
+              <button 
+                onClick={() => setViewingRequest(null)} 
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                {viewingRequest.request}
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end shrink-0">
+              <button 
+                onClick={() => setViewingRequest(null)} 
+                className="px-5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CALL-IN BOOKING MODAL */}
       {isModalOpen && (

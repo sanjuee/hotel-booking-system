@@ -12,6 +12,7 @@ import {
   LogOut,
   Filter,
   Info,
+  MessageSquare,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -131,8 +132,18 @@ export default function FrontDeskDashboard() {
     }
   }
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  // --- THE SORTING & FILTERING ENGINE ---
+
+  // 1. Bulletproof Local Date String (YYYY-MM-DD)
+  const getLocalYYYYMMDD = (dateInput: Date | string) => {
+    const d = new Date(dateInput)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const todayStr = getLocalYYYYMMDD(new Date())
 
   const uniqueTypes = Array.from(
     new Set(data?.liveRooms.map((r) => r.room?.name).filter(Boolean))
@@ -149,6 +160,7 @@ export default function FrontDeskDashboard() {
     filteredRooms = filteredRooms.filter((r) => r.status === selectedStatus)
   }
 
+  // Handle Walk-in Search Clashes
   if (walkInCheckIn && walkInCheckOut) {
     const searchStart = new Date(walkInCheckIn).getTime()
     const searchEnd = new Date(walkInCheckOut).getTime()
@@ -161,39 +173,47 @@ export default function FrontDeskDashboard() {
 
           const bStart = new Date(b.checkInDate).getTime()
           const bEnd = new Date(b.checkOutDate).getTime()
-
-          // The Standard Overlap Formula!
           return searchStart < bEnd && searchEnd > bStart
         })
-
         return !hasClash
       })
     }
   }
 
   const occupiedRooms = filteredRooms.filter((r) => r.status === 'OCCUPIED')
-  const allAvailableRooms = filteredRooms.filter(
-    (r) => r.status === 'AVAILABLE'
-  )
+  const allAvailableRooms = filteredRooms.filter((r) => r.status === 'AVAILABLE')
 
+  // Helper to ensure we always grab the CLOSEST incoming booking
+  const getNextBooking = (room: FrontDeskRoomUnit) => {
+    const confirmedBookings = room.bookings?.filter((b) => b.status === 'CONFIRMED') || []
+    if (confirmedBookings.length === 0) return null
+    
+    // Sort ascending by date so [0] is always the soonest arrival
+    confirmedBookings.sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime())
+    return confirmedBookings[0]
+  }
+
+  // Group 1: Incoming Today (High Danger)
   const incomingTodayRooms = allAvailableRooms.filter((room) => {
-    const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
+    const nextBooking = getNextBooking(room)
     if (!nextBooking) return false
-    const checkIn = new Date(nextBooking.checkInDate)
-    return checkIn.getTime() === today.getTime()
+    return getLocalYYYYMMDD(nextBooking.checkInDate) === todayStr
   })
 
+  // Group 2: Future Booked (Medium Danger)
   const futureBookedRooms = allAvailableRooms.filter((room) => {
-    const nextBooking = room.bookings?.find((b) => b.status === 'CONFIRMED')
+    const nextBooking = getNextBooking(room)
     if (!nextBooking) return false
-    const checkIn = new Date(nextBooking.checkInDate)
-    return checkIn.getTime() > today.getTime()
+    return getLocalYYYYMMDD(nextBooking.checkInDate) > todayStr
   })
 
+  // Group 3: Completely Free (Zero Danger)
   const completelyFreeRooms = allAvailableRooms.filter((room) => {
     const hasIncoming = room.bookings?.some((b) => b.status === 'CONFIRMED')
     return !hasIncoming
   })
+
+ 
 
   if (isLoading) {
     return (
@@ -469,10 +489,12 @@ export default function FrontDeskDashboard() {
         {/* OPERATIONS LOG (RIGHT SIDEBAR) */}
         <div className="xl:col-span-4 space-y-6">
           {/* Arrivals Board */}
+          {/* Arrivals Board */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <Users size={18} className="text-blue-600" /> Today's Arrivals
+                <Users size={18} className="text-blue-600" />
+                Today's Arrivals
               </h3>
               <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
                 {data?.arrivals.length || 0}
@@ -488,7 +510,7 @@ export default function FrontDeskDashboard() {
                 data?.arrivals.map((booking) => (
                   <div
                     key={booking.id}
-                    className="p-4 hover:bg-slate-50 transition-colors"
+                    className="p-4 hover:bg-slate-50 transition-colors flex flex-col"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
@@ -501,6 +523,18 @@ export default function FrontDeskDashboard() {
                         </div>
                       </div>
                     </div>
+
+                    {/* NEW: Special Requests Block */}
+                    {booking.specialReq && booking.specialReq.trim() !== '' && (
+                      <div className="mt-2 mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 flex gap-2 items-start">
+                        <MessageSquare size={14} className="text-yellow-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-yellow-800 font-medium leading-relaxed italic">
+                          <span className="font-bold uppercase tracking-wider text-[10px] block mb-0.5 not-italic text-yellow-600">Special Request</span>
+                          "{booking.specialReq}"
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       onClick={() =>
                         handleAction(
@@ -510,7 +544,7 @@ export default function FrontDeskDashboard() {
                         )
                       }
                       disabled={isProcessing === booking.id}
-                      className="w-full mt-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border border-green-200 py-1.5 rounded-md text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      className="w-full mt-auto bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 border border-green-200 py-1.5 rounded-md text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                       {isProcessing === booking.id ? (
                         'Processing...'

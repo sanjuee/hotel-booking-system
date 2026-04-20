@@ -21,6 +21,7 @@ export interface Booking {
   roomUnitId: string;
   roomUnit: FrontDeskRoomUnit; 
   specialReq?: string | null; 
+  createdAt: string;
 }
 
 export interface FrontDeskRoomUnit {
