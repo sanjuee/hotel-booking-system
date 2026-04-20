@@ -3,7 +3,7 @@
 import { Booking } from '@/types'
 import { useState, useEffect } from 'react'
 import { Search, Plus, Calendar as CalendarIcon } from 'lucide-react'
-import NewBookingForm from '@/components/admin/BookingForm'
+import BookingForm from '@/components/admin/BookingForm'
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -183,9 +183,10 @@ export default function AdminBookings() {
 
       {/* CALL-IN BOOKING MODAL */}
       {isModalOpen && (
-        <NewBookingForm 
+        <BookingForm 
           setIsModalOpen={setIsModalOpen} 
           onSuccess={fetchBookings} 
+          isCallInMode={true}
         />
       )}
     </div>
