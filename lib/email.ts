@@ -1,8 +1,9 @@
+import { Booking } from '@/types';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-export async function sendBookingEmails(booking: any, roomNumber: string, roomCategory: string) {
+export async function sendBookingEmails(booking: Booking, roomNumber: string, roomCategory: string) {
   try {
     // 1. SEND TO MANAGEMENT (Front Desk)
     await resend.emails.send({
@@ -35,7 +36,9 @@ export async function sendBookingEmails(booking: any, roomNumber: string, roomCa
             <p><strong>Room Type:</strong> ${roomCategory}</p>
             <p><strong>Check-in:</strong> ${new Date(booking.checkInDate).toLocaleDateString()}</p>
             <p><strong>Check-out:</strong> ${new Date(booking.checkOutDate).toLocaleDateString()}</p>
+            <p><strong>Total Price:</strong> ${booking.totalPrice}</p>
           </div>
+          ${booking.specialReq ? `<p><strong>Note on your request:</strong> We have received your special request ("${booking.specialReq}") and our team will do our best to accommodate it.</p>` : ''}
           <p>We look forward to hosting you!</p>
         </div>
       `,

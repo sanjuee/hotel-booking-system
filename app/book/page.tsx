@@ -471,7 +471,6 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* 🚨 NEW: Dynamic Price Summary Block */}
           {calculatedNights > 0 && selectedRoom && (
             <div className="bg-[#FDFBF7] p-5 rounded-xl border border-[#8B6E4E]/20 flex justify-between items-center my-6 animate-in fade-in slide-in-from-bottom-2">
               <div>
@@ -484,7 +483,7 @@ export default function BookingPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500 font-medium">Total Cost</p>
-                <p className="text-2xl font-serif font-bold text-[#8B6E4E]">
+                <p className="text-2xl font-headline font-bold text-[#8B6E4E]">
                   ₹{calculatedTotal.toLocaleString()}
                 </p>
               </div>

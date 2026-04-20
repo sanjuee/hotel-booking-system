@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { sendBookingEmails } from '@/lib/email'
+import { Booking } from '@/types'
 
 export async function GET() {
   try {
@@ -20,7 +22,7 @@ export async function GET() {
   }
 }
 
-// 2. UPDATE BOOKING STATUS (e.g., Cancel a booking)
+//  UPDATE BOOKING STATUS (e.g., Cancel a booking)
 export async function PATCH(request: Request) {
   try {
     const { id, status } = await request.json()
@@ -37,6 +39,7 @@ export async function PATCH(request: Request) {
   }
 }
 
+// New Booking (ONLINE & MANUAL)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -46,34 +49,73 @@ export async function POST(request: Request) {
       phone,
       checkInDate,
       checkOutDate,
-      totalPrice,
       roomId,
       roomUnitId,
       status,
+      specialReq, // guest's special requests
     } = body
 
+    //  DATE & NIGHTS CALCULATION
     const start = new Date(checkInDate)
     const end = new Date(checkOutDate)
+    const nights = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (nights <= 0) {
+      return NextResponse.json(
+        { error: 'Invalid date range. Check-out must be after check-in.' },
+        { status: 400 }
+      )
+    }
 
     let assignedUnitId = roomUnitId
+    let basePrice = 0
 
-    // 🚨 THE AUTO-ALLOCATOR 🚨
-    // If no specific unit was provided, the system must find one automatically
-    if (!assignedUnitId) {
+    // THE AUTO-ALLOCATOR & PRICE ENGINE
+    if (assignedUnitId) {
+      //  FRONT DESK ( If physical Unit was manually selected)
+      const unit = await prisma.roomUnit.findUnique({
+        where: { id: assignedUnitId },
+        include: { room: true },
+      })
+
+      if (!unit) {
+        return NextResponse.json(
+          { error: 'Room unit not found.' },
+          { status: 404 }
+        )
+      }
+      basePrice = unit.room.price
+    } else {
+      //  PUBLIC / CALL-IN (Category was selected, need to auto-allocate)
       if (!roomId) {
         return NextResponse.json(
-          { error: 'Room category is required for public bookings' },
+          { error: 'Room category is required for auto-allocation.' },
           { status: 400 }
         )
       }
 
+      // fetching the category to get the base price
+      const category = await prisma.room.findUnique({
+        where: { id: roomId },
+      })
+
+      if (!category) {
+        return NextResponse.json(
+          { error: 'Room category not found.' },
+          { status: 404 }
+        )
+      }
+      basePrice = category.price
+
+      //  finding an empty physical room for these dates
       const availableUnit = await prisma.roomUnit.findFirst({
         where: {
-          roomId: roomId, // Must be the category the guest requested (e.g., Deluxe)
-          status: { not: 'MAINTENANCE' }, // Don't assign broken rooms
+          roomId: roomId,
+          status: { not: 'MAINTENANCE' },
           bookings: {
             none: {
-              // The Overlap Formula: Ignore rooms that have overlapping confirmed bookings
               AND: [
                 { checkInDate: { lt: end } },
                 { checkOutDate: { gt: start } },
@@ -84,6 +126,7 @@ export async function POST(request: Request) {
         },
       })
 
+      // If no rooms available, throw the Sold Out error
       if (!availableUnit) {
         return NextResponse.json(
           { error: 'Sorry, this room type is sold out for these dates.' },
@@ -94,7 +137,10 @@ export async function POST(request: Request) {
       assignedUnitId = availableUnit.id
     }
 
-    // Create the booking with either the manually picked ID or the auto-allocated ID
+    //  PRICE CALCULATION
+    const securedTotalPrice = nights * basePrice
+
+    //  CREATE THE BOOKING
     const newBooking = await prisma.booking.create({
       data: {
         guestName,
@@ -102,11 +148,37 @@ export async function POST(request: Request) {
         phone,
         checkInDate: start,
         checkOutDate: end,
-        totalPrice: parseFloat(totalPrice),
+        totalPrice: securedTotalPrice, // Saving the server-calculated price
         status: status || 'CONFIRMED',
         roomUnitId: assignedUnitId,
+        specialReq: specialReq || null,
+      },
+      // Include the relation data so we can pass it to the email template
+      include: {
+        roomUnit: {
+          include: {
+            room: true,
+          },
+        },
       },
     })
+
+    //  EMAIL TRIGGER
+    // Only email the guest if this is a future reservation
+    if (newBooking.status === 'CONFIRMED' && newBooking.email) {
+      try {
+        await sendBookingEmails(
+          newBooking as any, // Cast to bypass slight Prisma vs Custom type strictness
+          newBooking.roomUnit.roomNumber,
+          newBooking.roomUnit.room.name
+        )
+      } catch (emailError) {
+        console.error(
+          'Non-fatal error: Failed to send confirmation email.',
+          emailError
+        )
+      }
+    }
 
     return NextResponse.json(newBooking, { status: 201 })
   } catch (error) {

@@ -14,15 +14,13 @@ export interface Booking {
   guestName: string;
   email: string;
   phone: string;
-  checkInDate: string;
-  checkOutDate: string;
+  checkInDate: string | Date;
+  checkOutDate: string | Date;
   totalPrice: number;
   status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
-  roomUnit: {
-    id: string;
-    roomNumber: string;
-    room: { name: string };
-  };
+  roomUnitId: string;
+  roomUnit: FrontDeskRoomUnit; 
+  specialReq?: string | null; 
 }
 
 export interface FrontDeskRoomUnit {
