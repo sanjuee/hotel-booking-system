@@ -15,7 +15,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { DashboardData, FrontDeskRoomUnit } from '@/types'
 import FrontDeskRoomCard from '@/components/admin/FrontDeskRoomCard'
-import NewBookingForm from '@/components/admin/NewBookingForm'
+import NewBookingForm from '@/components/admin/BookingForm'
 
 export default function FrontDeskDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)

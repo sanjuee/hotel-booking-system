@@ -3,7 +3,7 @@
 import { Booking } from '@/types'
 import { useState, useEffect } from 'react'
 import { Search, Plus, Calendar as CalendarIcon } from 'lucide-react'
-import NewBookingForm from '@/components/admin/NewBookingForm'
+import NewBookingForm from '@/components/admin/BookingForm'
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])

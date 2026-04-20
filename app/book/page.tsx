@@ -104,7 +104,7 @@ export default function BookingPage() {
         body: JSON.stringify(payload)
       })
 
-      if (res.status === 409) {
+      if (response.status === 409) {
         setIsSoldOut(true)
         setIsSubmitting(false)
         return; // Stop execution here!
