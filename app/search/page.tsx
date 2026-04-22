@@ -25,7 +25,7 @@ interface SearchResult {
 }
 
 // 🚨 We wrap the core logic in a component to safely use useSearchParams in Next.js
-export default function SearchResultsEngine() {
+function SearchResultsEngine() {
   const searchParams = useSearchParams()
 
   // Extract parameters from the URL
@@ -211,4 +211,15 @@ export default function SearchResultsEngine() {
       </div>
     </div>
   )
+}
+
+export default function SearchPage() {
+    return (
+        <div className="min-h-screen bg-[#FDFBF7]">
+            <div className="h-48 bg-[#1e3a8a] w-full"></div> 
+            <Suspense fallback={<div className="p-20 text-center">Loading search...</div>}>
+                <SearchResultsEngine />
+            </Suspense>
+        </div>
+    )
 }
