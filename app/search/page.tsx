@@ -24,7 +24,6 @@ interface SearchResult {
   totalPrice: number
 }
 
-// 🚨 We wrap the core logic in a component to safely use useSearchParams in Next.js
 function SearchResultsEngine() {
   const searchParams = useSearchParams()
 
@@ -71,10 +70,8 @@ function SearchResultsEngine() {
   const parsedGuests = guestsStr ? parseInt(guestsStr) : 2
 
   return (
-    <div >
-      <Header />
-      <div className="max-w-6xl mt-32 px-4 ">
-
+    
+      <div className="max-w-6xl mx-auto px-4 -mt-24 relative z-10 pb-20">
         <SearchAvailabiltyBar
           initialCheckIn={initialCheckIn}
           initialCheckOut={initialCheckOut}
@@ -209,13 +206,13 @@ function SearchResultsEngine() {
           </div>
         )}
       </div>
-    </div>
   )
 }
 
 export default function SearchPage() {
     return (
         <div className="min-h-screen bg-[#FDFBF7]">
+            <Header />
             <div className="h-48 bg-[#1e3a8a] w-full"></div> 
             <Suspense fallback={<div className="p-20 text-center">Loading search...</div>}>
                 <SearchResultsEngine />
