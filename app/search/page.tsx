@@ -97,8 +97,8 @@ function SearchResultsEngine() {
         {/* The Results Grid */}
         {!isSearching && searchResults.length > 0 && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ">
-            <h3 className="text-3xl font-serif font-bold  text-gray-900 mb-8 flex items-center gap-3 ">
-              Available Suites
+            <h3 className="text-3xl font-serif font-bold  text-gray-900 mb-8 flex items-center gap-3 mt-5 text-center">
+              Available Rooms
               <span className="text-sm font-sans font-normal text-gray-600 bg-gray-100 px-4 py-1.5 rounded-full">
                 {searchNights} Night{searchNights !== 1 ? 's' : ''} •{' '}
                 {parsedGuests} Guest{parsedGuests !== 1 ? 's' : ''}
@@ -213,7 +213,6 @@ export default function SearchPage() {
     return (
         <div className="min-h-screen bg-[#FDFBF7]">
             <Header />
-            
             <Suspense fallback={<div className="p-20 text-center">Loading search...</div>}>
                 <SearchResultsEngine />
             </Suspense>
