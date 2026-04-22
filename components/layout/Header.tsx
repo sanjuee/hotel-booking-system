@@ -22,10 +22,11 @@ export default function Header() {
                                     border-b border-secondary/60 pb-1 transition-all duration-300"
                         href="#" > About Us </a>
                 </nav>
-                <button className="bg-secondary text-on-secondary px-8 py-3 rounded-xl font-medium tracking-wide 
+                <Link href="/book"
+                    className="bg-secondary text-on-secondary px-8 py-3 rounded-xl font-medium tracking-wide 
                                     hover:brightness-90 hover:cursor-pointer transition-all duration-300 shadow-sm text-sm" >
                             Book Your Stay
-                </button>
+                </Link>
             </div>
         </header>
     )
