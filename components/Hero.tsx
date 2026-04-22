@@ -1,5 +1,5 @@
 import Image from "next/image"
-import SearchAvailabiltyBar from "./SearchAvailabilyBar"
+import SearchAvailabilityBar from "./SearchAvailabilityBar"
 
 export default function Hero() {
     return (
@@ -28,7 +28,7 @@ export default function Hero() {
                         Check room availability
                     </span>
                     <div className="w-full">
-                        <SearchAvailabiltyBar />
+                        <SearchAvailabilityBar />
                     </div>
                 </div>
             </div>
