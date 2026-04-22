@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect,Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Info, CheckCircle, Users, XCircle } from 'lucide-react'
 import Image from 'next/image'
 import { Room } from '@/types'
 
-export default function BookingPage() {
+function BookingEngine() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -531,3 +531,16 @@ export default function BookingPage() {
     </div>
   )
 }
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="text-gray-500 font-medium animate-pulse">Loading booking engine...</div>
+      </div>
+    }>
+      <BookingEngine />
+    </Suspense>
+  )
+}
+
