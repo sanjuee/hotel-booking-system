@@ -73,7 +73,7 @@ function SearchResultsEngine() {
   return (
     <div >
       <Header />
-      <div className="max-w-6xl mt-32 px-4 py-24 ">
+      <div className="max-w-6xl mt-32 px-4 ">
 
         <SearchAvailabiltyBar
           initialCheckIn={initialCheckIn}
