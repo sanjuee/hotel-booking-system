@@ -213,7 +213,7 @@ export default function SearchPage() {
     return (
         <div className="min-h-screen bg-[#FDFBF7]">
             <Header />
-            <div className="h-48 bg-[#1e3a8a] w-full"></div> 
+            
             <Suspense fallback={<div className="p-20 text-center">Loading search...</div>}>
                 <SearchResultsEngine />
             </Suspense>
